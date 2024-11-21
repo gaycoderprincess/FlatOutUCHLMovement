@@ -97,9 +97,7 @@ namespace HLMovement {
 		length = std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 		if (length) {
 			ilength = 1/length;
-			v[0] *= ilength;
-			v[1] *= ilength;
-			v[2] *= ilength;
+			v *= ilength;
 		}
 		return length;
 	}
@@ -2051,7 +2049,7 @@ namespace HLMovement {
 		// If we made it all the way, then copy trace end
 		//  as new player position.
 		if (trace.fraction == 1) {
-			VectorCopy (trace.endpos, pmove->origin);
+			VectorCopy(trace.endpos, pmove->origin);
 			return;
 		}
 
@@ -2067,7 +2065,7 @@ namespace HLMovement {
 		clip = PM_FlyMove();
 
 		// Copy the results out
-		VectorCopy(pmove->origin  , down);
+		VectorCopy(pmove->origin, down);
 		VectorCopy(pmove->velocity, downvel);
 
 		// Reset original values.
@@ -2354,7 +2352,7 @@ namespace HLMovement {
 		PM_ReduceTimers();
 
 		// Convert view angles to vectors
-		AngleVectors (pmove->angles, pmove->forward, pmove->right, pmove->up);
+		AngleVectors(pmove->angles, pmove->forward, pmove->right, pmove->up);
 
 		// Always try and unstick us unless we are in NOCLIP mode
 		/*if (pmove->movetype != MOVETYPE_NOCLIP && pmove->movetype != MOVETYPE_NONE) {
@@ -2613,6 +2611,8 @@ namespace HLMovement {
 			pmove->origin.y = MetersToUnits(ply->pCar->GetMatrix()->p.y + 1);
 			pmove->origin.z = MetersToUnits(ply->pCar->GetMatrix()->p.z);
 		}
+		pmove->angles = {0,0,0};
+		pmove->punchangle = {0,0,0};
 		pmove->velocity = {0,0,0};
 		pmove->onground = -1;
 		pmove->movetype = MOVETYPE_WALK;
