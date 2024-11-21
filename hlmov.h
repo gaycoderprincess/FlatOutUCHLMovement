@@ -326,6 +326,10 @@ namespace HLMovement {
 		double distFromOrigin;
 		int surfaceId;
 
+		pmtrace_t() {
+			Default();
+		}
+
 		void Default() {
 			allsolid = false;
 			startsolid = false;
@@ -567,12 +571,11 @@ namespace HLMovement {
 
 		// Take angles from command.
 		if (!pmove->dead) {
-			VectorCopy(pmove->cmd.viewangles, v_angle);
+			v_angle = pmove->cmd.viewangles;
 
 			auto punch = pmove->punchangle;
 			punch[PITCH] /= 3.0; // 1/3 pitch from xash3d
-
-			VectorAdd(v_angle, punch, v_angle);
+			v_angle += punch;
 
 			// Set up view angles.
 			// using V_CalcRoll here instead of PM_CalcRoll
@@ -2612,14 +2615,47 @@ namespace HLMovement {
 			pmove->origin.z = MetersToUnits(ply->pCar->GetMatrix()->p.z);
 		}
 		pmove->angles = {0,0,0};
+		pmove->oldangles = {0,0,0};
+		pmove->cmd.viewangles = {0,0,0};
 		pmove->punchangle = {0,0,0};
 		pmove->velocity = {0,0,0};
+		pmove->basevelocity = {0,0,0};
+		pmove->movedir = {0,0,0};
 		pmove->onground = -1;
 		pmove->movetype = MOVETYPE_WALK;
 		pmove->usehull = 0;
 		pmove->view_ofs[0] = 0;
 		pmove->view_ofs[FORWARD] = 0;
 		pmove->view_ofs[UP] = VEC_VIEW;
+		pmove->forward = {0,0,0};
+		pmove->right = {0,0,0};
+		pmove->up = {0,0,0};
+		pmove->flDuckTime = 0;
+		pmove->bInDuck = false;
+		pmove->flTimeStepSound = 0;
+		pmove->iStepLeft = 0;
+		pmove->flFallVelocity = 0;
+		pmove->flSwimTime = 0;
+		pmove->flags = 0;
+		pmove->usehull = 0;
+		pmove->gravity = 1;
+		pmove->friction = 1;
+		pmove->oldbuttons = 0;
+		pmove->waterjumptime = 0;
+		pmove->dead = false;
+		pmove->movetype = MOVETYPE_WALK;
+		pmove->onground = -1;
+		pmove->waterlevel = 0;
+		pmove->oldwaterlevel = 0;
+		pmove->watertype = CONTENTS_EMPTY;
+		pmove->chtexturetype = CHAR_TEX_CONCRETE;
+		pmove->maxspeed = sv_maxspeed;
+		pmove->clientmaxspeed = sv_maxspeed;
+		pmove->cmd.forwardmove = 0;
+		pmove->cmd.sidemove = 0;
+		pmove->cmd.upmove = 0;
+		pmove->cmd.buttons = 0;
+		pmove->cmd.msec = 0;
 		for (int i = 0; i < 4; i++) {
 			pmove->player_mins[i][0] = pm_hullmins[i][0];
 			pmove->player_mins[i][FORWARD] = pm_hullmins[i][1];
