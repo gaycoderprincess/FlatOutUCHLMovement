@@ -14,7 +14,7 @@ namespace HLMovement {
 
 	std::string lastConsoleMsg;
 
-	bool bEnabled = false;
+	bool bEnabled = true;
 	bool bCanLongJump = false;
 	bool bAutoBhop = true;
 	bool bABH = false;
@@ -56,7 +56,7 @@ namespace HLMovement {
 	}
 
 	inline double DotProduct(const NyaVec3Double& x, const NyaVec3Double& y) {
-		return ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2]);
+		return (x[0]*y[0]+x[1]*y[1]+x[2]*y[2]);
 	}
 	inline void CrossProduct (const NyaVec3Double v1, const NyaVec3Double v2, NyaVec3Double cross) {
 		cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
@@ -64,32 +64,32 @@ namespace HLMovement {
 		cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 	}
 	inline void VectorFill(NyaVec3Double& a, float b) {
-		(a)[0]=(b);
-		(a)[1]=(b);
-		(a)[2]=(b);
+		a[0]=b;
+		a[1]=b;
+		a[2]=b;
 	}
 	inline float VectorAvg(const NyaVec3Double& a) {
-		return ( ( (a)[0] + (a)[1] + (a)[2] ) / 3 );
+		return ((a[0] + a[1] + a[2]) / 3.0);
 	}
 	inline void VectorSubtract(const NyaVec3Double& a, const NyaVec3Double& b, NyaVec3Double& c) {
-		(c)[0]=(a)[0]-(b)[0];
-		(c)[1]=(a)[1]-(b)[1];
-		(c)[2]=(a)[2]-(b)[2];
+		c[0]=a[0]-b[0];
+		c[1]=a[1]-b[1];
+		c[2]=a[2]-b[2];
 	}
 	inline void VectorAdd(const NyaVec3Double& a, const NyaVec3Double& b, NyaVec3Double& c) {
-		(c)[0]=(a)[0]+(b)[0];
-		(c)[1]=(a)[1]+(b)[1];
-		(c)[2]=(a)[2]+(b)[2];
+		c[0]=a[0]+b[0];
+		c[1]=a[1]+b[1];
+		c[2]=a[2]+b[2];
 	}
 	inline void VectorCopy(const NyaVec3Double& a, NyaVec3Double& b) {
-		(b)[0]=(a)[0];
-		(b)[1]=(a)[1];
-		(b)[2]=(a)[2];
+		b[0]=a[0];
+		b[1]=a[1];
+		b[2]=a[2];
 	}
 	inline void VectorScale(const NyaVec3Double& a, float b, NyaVec3Double& c) {
-		(c)[0]=(b)*(a)[0];
-		(c)[1]=(b)*(a)[1];
-		(c)[2]=(b)*(a)[2];
+		c[0]=b*a[0];
+		c[1]=b*a[1];
+		c[2]=b*a[2];
 	}
 	inline float VectorNormalize(NyaVec3Double& v) {
 		float length, ilength;
@@ -458,16 +458,16 @@ namespace HLMovement {
 		if ((pmove->oldwaterlevel == 0 && pmove->waterlevel != 0) || (pmove->oldwaterlevel != 0 && pmove->waterlevel == 0)) {
 			switch (rand() % 4) {
 				case 0:
-					PlayGameSound( "player/pl_wade1.wav", 1 );
+					PlayGameSound("player/pl_wade1.wav", 1);
 					break;
 				case 1:
-					PlayGameSound( "player/pl_wade2.wav", 1 );
+					PlayGameSound("player/pl_wade2.wav", 1);
 					break;
 				case 2:
-					PlayGameSound( "player/pl_wade3.wav", 1 );
+					PlayGameSound("player/pl_wade3.wav", 1);
 					break;
 				case 3:
-					PlayGameSound( "player/pl_wade4.wav", 1 );
+					PlayGameSound("player/pl_wade4.wav", 1);
 					break;
 			}
 		}
@@ -542,9 +542,9 @@ namespace HLMovement {
 			  (pmove->cmd.sidemove * pmove->cmd.sidemove) +
 			  (pmove->cmd.upmove * pmove->cmd.upmove));
 
-		maxspeed = pmove->clientmaxspeed; //atof( pmove->PM_Info_ValueForKey( pmove->physinfo, "maxspd" ) );
+		maxspeed = pmove->clientmaxspeed; // atof(pmove->PM_Info_ValueForKey(pmove->physinfo, "maxspd"));
 		if (maxspeed != 0.0) {
-			pmove->maxspeed = std::min( maxspeed, pmove->maxspeed );
+			pmove->maxspeed = std::min(maxspeed, pmove->maxspeed);
 		}
 
 		// Slow down, I'm pulling it! (a box maybe) but only when I'm standing on ground
@@ -998,9 +998,7 @@ namespace HLMovement {
 			}
 
 			// Adjust velocity based on water current, if any.
-			/*if ( ( truecont <= CONTENTS_CURRENT_0 ) &&
-				 ( truecont >= CONTENTS_CURRENT_DOWN ) )
-			{
+			/*if ((truecont <= CONTENTS_CURRENT_0) && (truecont >= CONTENTS_CURRENT_DOWN)) {
 				// The deeper we are, the stronger the current.
 				static vec3_t current_table[] =
 						{
@@ -1225,7 +1223,7 @@ namespace HLMovement {
 		speed = pmove->velocity.length();
 
 		// determine if we are on a ladder
-		fLadder = ( pmove->movetype == MOVETYPE_FLY );// IsOnLadder();
+		fLadder = pmove->movetype == MOVETYPE_FLY; // IsOnLadder();
 
 		// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!
 		if ((pmove->flags & FL_DUCKING) || fLadder) {
@@ -1342,7 +1340,7 @@ namespace HLMovement {
 #endif
 			if (trace.startsolid) {
 				// See if we are stuck?  If so, stay ducked with the duck hull until we have a clear spot
-				lastConsoleMsg = "unstick got stuck\n";
+				lastConsoleMsg = "unstick got stuck";
 				pmove->usehull = 1;
 				return;
 			}
@@ -1550,7 +1548,7 @@ namespace HLMovement {
 #ifdef NYA_HL_COL_FALLBACK
 			friction = movevars->friction;
 #else
-			trace = PM_PlayerTrace (start, stop );
+			trace = PM_PlayerTrace (start, stop);
 
 			if (trace.fraction == 1.0f) {
 				friction = movevars->friction*movevars->edgefriction;
@@ -1808,7 +1806,7 @@ namespace HLMovement {
 
 		if (allFraction == 0) {
 			VectorCopy(vec3_origin, pmove->velocity);
-			lastConsoleMsg = "Don't stick\n";
+			lastConsoleMsg = "Don't stick";
 		}
 
 		return blocked;
@@ -2173,16 +2171,16 @@ namespace HLMovement {
 
 				switch (rand() % 4) {
 					case 0:
-						PlayGameSound( "player/pl_wade1.wav", 1 );
+						PlayGameSound("player/pl_wade1.wav", 1);
 						break;
 					case 1:
-						PlayGameSound( "player/pl_wade2.wav", 1 );
+						PlayGameSound("player/pl_wade2.wav", 1);
 						break;
 					case 2:
-						PlayGameSound( "player/pl_wade3.wav", 1 );
+						PlayGameSound("player/pl_wade3.wav", 1);
 						break;
 					case 3:
-						PlayGameSound( "player/pl_wade4.wav", 1 );
+						PlayGameSound("player/pl_wade4.wav", 1);
 						break;
 				}
 			}
@@ -2281,14 +2279,13 @@ namespace HLMovement {
 			else if (pmove->flFallVelocity > PLAYER_MAX_SAFE_FALL_SPEED) {
 				// NOTE:  In the original game dll , there were no breaks after these cases, causing the first one to
 				// cascade into the second
-				//switch ( RandomLong(0,1) )
-				//{
+				//switch (rand() % 2) {
 				//case 0:
-				//PlayGameSound( "player/pl_fallpain2.wav", 1 );
+				//PlayGameSound("player/pl_fallpain2.wav", 1);
 				//break;
 				//case 1:
-				PlayGameSound( "player/pl_fallpain3.wav", 1 );
-				//	break;
+				PlayGameSound("player/pl_fallpain3.wav", 1);
+				//break;
 				//}
 				fvol = 1.0;
 			}
@@ -2397,7 +2394,7 @@ namespace HLMovement {
 		// Don't run ladder code if dead or on a train
 		//if (!pmove->dead && !(pmove->flags & FL_ONTRAIN)) {
 		//	if (pLadder) {
-		//		PM_LadderMove( pLadder );
+		//		PM_LadderMove(pLadder);
 		//	}
 		//	else if (pmove->movetype != MOVETYPE_WALK && pmove->movetype != MOVETYPE_NOCLIP) {
 		//		// Clear ladder stuff unless player is noclipping
