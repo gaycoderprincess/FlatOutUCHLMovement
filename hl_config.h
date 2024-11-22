@@ -3,7 +3,7 @@ namespace HLMovement {
 	// ingame variable config
 	bool bEnabled = true;
 	bool bCanLongJump = false;
-	bool bAutoBhop = true;
+	bool bAutoHop = true;
 	bool bABH = false;
 	bool bABHMixed = false;
 	bool bBhopCap = false;

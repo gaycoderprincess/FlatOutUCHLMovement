@@ -88,9 +88,10 @@ void RunMovement(Camera* cam) {
 
 	static CNyaTimer gTimer;
 	gTimer.Process();
-	HLMovement::Process(gTimer.fDeltaTime);
-
-	FO2Cam::Process(cam);
+	if (pGameFlow->nRaceState == RACE_STATE_RACING) {
+		HLMovement::Process(gTimer.fDeltaTime);
+		FO2Cam::Process(cam);
+	}
 }
 
 void MainLoop() {
@@ -157,6 +158,52 @@ void MouseWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	}
 }
 
+void LoadConfig() {
+	auto config = toml::parse_file("FlatOutUCHLMovement_gcp.toml");
+	HLMovement::bEnabled = config["main"]["enabled"].value_or(HLMovement::bEnabled);
+	HLMovement::bCanLongJump = config["main"]["longjump"].value_or(HLMovement::bCanLongJump);
+	HLMovement::bAutoHop = config["main"]["autohop"].value_or(HLMovement::bAutoHop);
+	HLMovement::bABH = config["main"]["abh"].value_or(HLMovement::bABH);
+	HLMovement::bABHMixed = config["main"]["abh_mixed"].value_or(HLMovement::bABHMixed);
+	HLMovement::bBhopCap = config["main"]["bhop_cap"].value_or(HLMovement::bBhopCap);
+	HLMovement::bSmartVelocityCap = config["main"]["better_maxvelocity"].value_or(HLMovement::bSmartVelocityCap);
+	HLMovement::bNoclipKey = config["main"]["noclip_toggle"].value_or(HLMovement::bNoclipKey);
+
+	HLMovement::bTeleportCar = config["game"]["teleport_car"].value_or(HLMovement::bTeleportCar);
+	HLMovement::bCarGodmode = config["game"]["car_godmode"].value_or(HLMovement::bCarGodmode);
+
+	HLMovement::nPhysicsSteps = config["advanced"]["physics_steps"].value_or(HLMovement::nPhysicsSteps);
+	HLMovement::nColDensity = config["advanced"]["collision_density"].value_or(HLMovement::nColDensity);
+
+	FO2Cam::fFOV = config["cvars"]["fov_desired"].value_or(FO2Cam::fFOV);
+	FO2Cam::fSensitivity = config["cvars"]["sensitivity"].value_or(FO2Cam::fSensitivity);
+	HLMovement::fSoundVolume = config["cvars"]["volume"].value_or(HLMovement::fSoundVolume);
+	HLMovement::cl_bob = config["cvars"]["cl_bob"].value_or(HLMovement::cl_bob);
+	HLMovement::cl_bobcycle = config["cvars"]["cl_bobcycle"].value_or(HLMovement::cl_bobcycle);
+	HLMovement::cl_bobup = config["cvars"]["cl_bobup"].value_or(HLMovement::cl_bobup);
+	HLMovement::cl_forwardspeed = config["cvars"]["cl_forwardspeed"].value_or(HLMovement::cl_forwardspeed);
+	HLMovement::cl_sidespeed = config["cvars"]["cl_sidespeed"].value_or(HLMovement::cl_sidespeed);
+	HLMovement::cl_upspeed = config["cvars"]["cl_upspeed"].value_or(HLMovement::cl_upspeed);
+	HLMovement::cl_movespeedkey = config["cvars"]["cl_movespeedkey"].value_or(HLMovement::cl_movespeedkey);
+	HLMovement::sv_gravity = config["cvars"]["sv_gravity"].value_or(HLMovement::sv_gravity);
+	HLMovement::sv_stopspeed = config["cvars"]["sv_stopspeed"].value_or(HLMovement::sv_stopspeed);
+	HLMovement::sv_maxspeed = config["cvars"]["sv_maxspeed"].value_or(HLMovement::sv_maxspeed);
+	HLMovement::sv_noclipspeed = config["cvars"]["sv_noclipspeed"].value_or(HLMovement::sv_noclipspeed);
+	HLMovement::sv_accelerate = config["cvars"]["sv_accelerate"].value_or(HLMovement::sv_accelerate);
+	HLMovement::sv_airaccelerate = config["cvars"]["sv_airaccelerate"].value_or(HLMovement::sv_airaccelerate);
+	HLMovement::sv_wateraccelerate = config["cvars"]["sv_wateraccelerate"].value_or(HLMovement::sv_wateraccelerate);
+	HLMovement::sv_friction = config["cvars"]["sv_friction"].value_or(HLMovement::sv_friction);
+	HLMovement::sv_edgefriction = config["cvars"]["sv_edgefriction"].value_or(HLMovement::sv_edgefriction);
+	HLMovement::sv_waterfriction = config["cvars"]["sv_waterfriction"].value_or(HLMovement::sv_waterfriction);
+	//HLMovement::sv_entgravity = config["cvars"]["sv_entgravity"].value_or(HLMovement::sv_entgravity);
+	HLMovement::sv_bounce = config["cvars"]["sv_bounce"].value_or(HLMovement::sv_bounce);
+	HLMovement::sv_stepsize = config["cvars"]["sv_stepsize"].value_or(HLMovement::sv_stepsize);
+	HLMovement::sv_maxvelocity = config["cvars"]["sv_maxvelocity"].value_or(HLMovement::sv_maxvelocity);
+	//HLMovement::mp_footsteps = config["cvars"]["mp_footsteps"].value_or(HLMovement::mp_footsteps);
+	HLMovement::sv_rollangle = config["cvars"]["sv_rollangle"].value_or(HLMovement::sv_rollangle);
+	HLMovement::sv_rollspeed = config["cvars"]["sv_rollspeed"].value_or(HLMovement::sv_rollspeed);
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -177,6 +224,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			UpdateCameraHooked_call = (void(__thiscall*)(void*, float))(*(uintptr_t*)0x6EB7DC);
 			NyaHookLib::Patch(0x6EB7DC, &UpdateCameraHooked);
+
+			LoadConfig();
 		} break;
 		default:
 			break;

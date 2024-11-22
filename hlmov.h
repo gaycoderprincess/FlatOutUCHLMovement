@@ -1673,7 +1673,7 @@ namespace HLMovement {
 			return;		// in air, so no effect
 		}
 
-		if (!bAutoBhop && pmove->oldbuttons & IN_JUMP) return; // don't pogo stick
+		if (!bAutoHop && pmove->oldbuttons & IN_JUMP) return; // don't pogo stick
 
 		// In the air now.
 		pmove->onground = -1;
@@ -2230,7 +2230,7 @@ namespace HLMovement {
 		if (DrawMenuOption("Behavior", "Adjust the movement physics")) {
 			ChloeMenuLib::BeginMenu();
 
-			ValueEditorMenu(bAutoBhop, "Auto Bhop");
+			ValueEditorMenu(bAutoHop, "Auto Hop");
 			ValueEditorMenu(bABH, "ABH");
 			ValueEditorMenu(bABHMixed, "Mixed ABH");
 			ValueEditorMenu(bCanLongJump, "Long Jump Module");
