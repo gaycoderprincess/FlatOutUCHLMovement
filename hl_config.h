@@ -1,11 +1,14 @@
 // custom config
 namespace HLMovement {
+	// ingame variable config
 	bool bEnabled = true;
 	bool bCanLongJump = false;
 	bool bAutoBhop = true;
 	bool bABH = false;
 	bool bABHMixed = false;
 	bool bBhopCap = false;
+	bool bSmartVelocityCap = false;
+	bool bNoclipKey = false;
 	float fSoundVolume = 1;
 
 	// game integration config

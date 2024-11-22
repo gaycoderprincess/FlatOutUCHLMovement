@@ -899,18 +899,45 @@ namespace HLMovement {
 
 	// empty for now, might not be required
 	void PM_CheckVelocity() {
-		//
-		// bound velocity
-		//
-		for (int i = 0; i < 3; i++) {
-			// Bound it.
-			if (pmove->velocity[i] > movevars->maxvelocity) {
-				lastConsoleMsg = "PM Got a velocity too high on " + std::to_string(i);
-				pmove->velocity[i] = movevars->maxvelocity;
+		if (bSmartVelocityCap) {
+			// handle horizontal movement as one
+			auto hvel = pmove->velocity;
+			hvel[UP] = 0;
+			if (hvel.length() > movevars->maxvelocity) {
+				hvel.Normalize();
+				hvel *= movevars->maxvelocity;
+				pmove->velocity[0] = hvel[0];
+				pmove->velocity[FORWARD] = hvel[FORWARD];
 			}
-			else if (pmove->velocity[i] < -movevars->maxvelocity) {
-				lastConsoleMsg = "PM Got a velocity too low on " + std::to_string(i);
-				pmove->velocity[i] = -movevars->maxvelocity;
+
+			// bound the up vector normally
+			if (pmove->velocity[UP] > movevars->maxvelocity) {
+				pmove->velocity[UP] = movevars->maxvelocity;
+			}
+			else if (pmove->velocity[UP] < -movevars->maxvelocity) {
+				pmove->velocity[UP] = -movevars->maxvelocity;
+			}
+
+			// this won't work for ABH
+			//if (pmove->velocity.length() > movevars->maxvelocity) {
+			//	pmove->velocity.Normalize();
+			//	pmove->velocity *= movevars->maxvelocity;
+			//}
+		}
+		else {
+			//
+			// bound velocity
+			//
+			for (int i = 0; i < 3; i++) {
+				// Bound it.
+				if (pmove->velocity[i] > movevars->maxvelocity) {
+					lastConsoleMsg = "PM Got a velocity too high on " + std::to_string(i);
+					pmove->velocity[i] = movevars->maxvelocity;
+				}
+				else if (pmove->velocity[i] < -movevars->maxvelocity) {
+					lastConsoleMsg = "PM Got a velocity too low on " + std::to_string(i);
+					pmove->velocity[i] = -movevars->maxvelocity;
+				}
 			}
 		}
 	}
@@ -2178,6 +2205,7 @@ namespace HLMovement {
 	}
 
 	void ToggleNoclip() {
+		if (!bNoclipKey) return;
 		pmove->movetype = pmove->movetype == MOVETYPE_NOCLIP ? MOVETYPE_WALK : MOVETYPE_NOCLIP;
 	}
 
@@ -2207,6 +2235,11 @@ namespace HLMovement {
 			ValueEditorMenu(bABHMixed, "Mixed ABH");
 			ValueEditorMenu(bCanLongJump, "Long Jump Module");
 			ValueEditorMenu(bBhopCap, "Bhop Speed Cap");
+			ValueEditorMenu(bSmartVelocityCap, "Better sv_maxvelocity");
+			ValueEditorMenu(bNoclipKey, "Noclip Key");
+
+			ValueEditorMenu(bTeleportCar, "Teleport Car");
+			ValueEditorMenu(bCarGodmode, "Car Godmode");
 
 			if (DrawMenuOption("Advanced")) {
 				ChloeMenuLib::BeginMenu();

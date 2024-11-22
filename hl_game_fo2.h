@@ -77,7 +77,7 @@ namespace HLMovement {
 		*out = {0,0,0};
 		if (auto ply = GetPlayer(0)) {
 			out->x = ply->pCar->GetMatrix()->p.x;
-			out->y = ply->pCar->GetMatrix()->p.y + 1;
+			out->y = ply->pCar->GetMatrix()->p.y + 1.5;
 			out->z = ply->pCar->GetMatrix()->p.z;
 		}
 	}
@@ -93,10 +93,10 @@ namespace HLMovement {
 
 		if (auto ply = GetPlayer(0)) {
 			ply->pCar->GetMatrix()->p.x = in->x;
-			ply->pCar->GetMatrix()->p.y = in->y - 1;
+			ply->pCar->GetMatrix()->p.y = in->y - 1.5;
 			ply->pCar->GetMatrix()->p.z = in->z;
 			ply->pCar->GetVelocity()->x = inVelocity->x;
-			ply->pCar->GetVelocity()->y = inVelocity->y - 1;
+			ply->pCar->GetVelocity()->y = inVelocity->y;
 			ply->pCar->GetVelocity()->z = inVelocity->z;
 			*ply->pCar->GetAngVelocity() = {0,0,0};
 			if (bCarGodmode) {

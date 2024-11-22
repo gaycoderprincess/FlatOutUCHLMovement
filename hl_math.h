@@ -11,18 +11,10 @@ namespace HLMovement {
 	inline double DotProduct(const NyaVec3Double& x, const NyaVec3Double& y) {
 		return (x[0]*y[0]+x[1]*y[1]+x[2]*y[2]);
 	}
-	inline void CrossProduct (const NyaVec3Double v1, const NyaVec3Double v2, NyaVec3Double cross) {
+	inline void CrossProduct(const NyaVec3Double v1, const NyaVec3Double v2, NyaVec3Double cross) {
 		cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
 		cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
 		cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
-	}
-	inline void VectorFill(NyaVec3Double& a, float b) {
-		a[0]=b;
-		a[1]=b;
-		a[2]=b;
-	}
-	inline float VectorAvg(const NyaVec3Double& a) {
-		return ((a[0] + a[1] + a[2]) / 3.0);
 	}
 	inline void VectorSubtract(const NyaVec3Double& a, const NyaVec3Double& b, NyaVec3Double& c) {
 		c[0]=a[0]-b[0];

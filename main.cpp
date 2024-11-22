@@ -101,10 +101,6 @@ void MainLoop() {
 
 	if (!pGameFlow) return;
 
-	//if (pGameFlow->nGameState == GAME_STATE_MENU) {
-	//	RunMovement(pGameFlow->pMenuInterface->Scene.pCamera);
-	//}
-
 	if (IsKeyJustPressed('V')) {
 		HLMovement::ToggleNoclip();
 	}
