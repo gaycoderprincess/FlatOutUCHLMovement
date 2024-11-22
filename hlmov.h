@@ -1,123 +1,66 @@
+#include "hl_cvars.h"
+#include "hl_consts.h"
+#include "hl_config.h"
+#include "hl_types.h"
+#include "hl_math.h"
+#include "hl_audio.h"
+#include "hl_game_fo2.h"
+
 namespace HLMovement {
-	static std::string GetSpeechPath(const std::string& file) {
-		return "data/sound/hl/" + file;
+	pmtrace_t PointRaytrace(NyaVec3Double origin, NyaVec3Double end) {
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				origin[i] = UnitsToMeters(origin[i]);
+				end[i] = UnitsToMeters(end[i]);
+			}
+		}
+		auto trace = PointRaytraceGame(&origin, &end);
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				trace->endpos[i] = MetersToUnits(trace->endpos[i]);
+				trace->plane.dist = MetersToUnits(trace->plane.dist);
+			}
+		}
+		return *trace;
 	}
 
-	float fSoundVolume = 1;
-
-	std::vector<NyaAudio::NyaSound> aSoundCache;
-	void PlayGameSound(const std::string& path, float volume) {
-		NyaAudio::Init(pDeviceD3d->hWnd);
-
-		auto sound = NyaAudio::LoadFile(GetSpeechPath(path).c_str());
-		if (!sound) return;
-		NyaAudio::SetVolume(sound, volume * fSoundVolume);
-		NyaAudio::Play(sound);
-		aSoundCache.push_back(sound);
+#ifndef NYA_HL_COL_FALLBACK
+	pmtrace_t PM_PlayerTrace(NyaVec3Double origin, NyaVec3Double end) {
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				origin[i] = UnitsToMeters(origin[i]);
+				end[i] = UnitsToMeters(end[i]);
+			}
+		}
+		auto trace = PM_PlayerTraceGame(&origin, &end);
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				trace->endpos[i] = MetersToUnits(trace->endpos[i]);
+				trace->plane.dist = MetersToUnits(trace->plane.dist);
+			}
+		}
+		return *trace;
 	}
+
+	pmtrace_t PM_PlayerTraceDown(NyaVec3Double origin, NyaVec3Double end) {
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				origin[i] = UnitsToMeters(origin[i]);
+				end[i] = UnitsToMeters(end[i]);
+			}
+		}
+		auto trace = PM_PlayerTraceDownGame(&origin, &end);
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				trace->endpos[i] = MetersToUnits(trace->endpos[i]);
+				trace->plane.dist = MetersToUnits(trace->plane.dist);
+			}
+		}
+		return *trace;
+	}
+#endif
 
 	std::string lastConsoleMsg;
-
-	bool bEnabled = true;
-	bool bCanLongJump = false;
-	bool bAutoBhop = true;
-	bool bABH = false;
-	bool bABHMixed = false;
-	bool bBhopCap = false;
-
-	float cl_bob = 0.01;
-	float cl_bobcycle = 0.8;
-	float cl_bobup = 0.5;
-
-	float cl_forwardspeed = 400;
-	float cl_sidespeed = 400;
-	float cl_upspeed = 320;
-	float cl_movespeedkey = 0.3;
-
-	float sv_gravity = 800;  			// Gravity for map
-	float sv_stopspeed = 100;			// Deceleration when not moving
-	float sv_maxspeed = 320; 			// Max allowed speed
-	float sv_noclipspeed = 320; 		// Max allowed speed
-	float sv_accelerate = 10;			// Acceleration factor
-	float sv_airaccelerate = 10;		// Same for when in open air
-	float sv_wateraccelerate = 10;		// Same for when in water
-	float sv_friction = 4;
-	float sv_edgefriction = 2;			// Extra friction near dropofs
-	float sv_waterfriction = 1;			// Less in water
-	//float sv_entgravity = 1.0;  		// 1.0
-	float sv_bounce = 1.0;      		// Wall bounce value. 1.0
-	float sv_stepsize = 18;
-	float sv_maxvelocity = 2000; 		// maximum server velocity.
-	//bool mp_footsteps = true;			// Play footstep sounds
-	float sv_rollangle = 2;
-	float sv_rollspeed = 200;
-
-	inline double UnitsToMeters(double f) {
-		return f * 0.0254;
-	}
-
-	inline double MetersToUnits(double f) {
-		return f / 0.0254;
-	}
-
-	inline double DotProduct(const NyaVec3Double& x, const NyaVec3Double& y) {
-		return (x[0]*y[0]+x[1]*y[1]+x[2]*y[2]);
-	}
-	inline void CrossProduct (const NyaVec3Double v1, const NyaVec3Double v2, NyaVec3Double cross) {
-		cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
-		cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
-		cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
-	}
-	inline void VectorFill(NyaVec3Double& a, float b) {
-		a[0]=b;
-		a[1]=b;
-		a[2]=b;
-	}
-	inline float VectorAvg(const NyaVec3Double& a) {
-		return ((a[0] + a[1] + a[2]) / 3.0);
-	}
-	inline void VectorSubtract(const NyaVec3Double& a, const NyaVec3Double& b, NyaVec3Double& c) {
-		c[0]=a[0]-b[0];
-		c[1]=a[1]-b[1];
-		c[2]=a[2]-b[2];
-	}
-	inline void VectorAdd(const NyaVec3Double& a, const NyaVec3Double& b, NyaVec3Double& c) {
-		c[0]=a[0]+b[0];
-		c[1]=a[1]+b[1];
-		c[2]=a[2]+b[2];
-	}
-	inline void VectorCopy(const NyaVec3Double& a, NyaVec3Double& b) {
-		b[0]=a[0];
-		b[1]=a[1];
-		b[2]=a[2];
-	}
-	inline void VectorScale(const NyaVec3Double& a, float b, NyaVec3Double& c) {
-		c[0]=b*a[0];
-		c[1]=b*a[1];
-		c[2]=b*a[2];
-	}
-	inline float VectorNormalize(NyaVec3Double& v) {
-		float length, ilength;
-
-		length = std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-		if (length) {
-			ilength = 1/length;
-			v *= ilength;
-		}
-		return length;
-	}
-	inline void VectorClear(NyaVec3Double& a) {
-		a[0]=0.0;
-		a[1]=0.0;
-		a[2]=0.0;
-	}
-	inline void VectorMA(const NyaVec3Double &start, float scale, const NyaVec3Double &direction, NyaVec3Double &dest) {
-		dest.x = start.x + scale * direction.x;
-		dest.y = start.y + scale * direction.y;
-		dest.z = start.z + scale * direction.z;
-	}
-
-	NyaVec3Double vec3_origin = {0,0,0};
 
 	// default hullmins
 	static const NyaVec3Double pm_hullmins[4] = {
@@ -134,322 +77,6 @@ namespace HLMovement {
 			{   0,   0,   0 },
 			{  32,  32,  32 },
 	};
-
-	// pitch/yaw/roll for flatout cam
-	const int PITCH = 1;
-	const int YAW = 0;
-	const int ROLL = 2;
-
-	//const int SIDE = 0;
-	const int FORWARD = 2;
-	const int UP = 1;
-
-	const int MAX_PHYSENTS = 600; 				// Must have room for all entities in the world.
-	const int MAX_MOVEENTS = 64;
-	const int MAX_CLIP_PLANES = 5;
-
-	const float TIME_TO_DUCK 				= 0.4;
-	const int VEC_HULL_MIN					= -36;
-	const int VEC_HULL_MAX					= 36;
-	const int VEC_VIEW						= 28;
-	const int VEC_DUCK_HULL_MIN				= -18;
-	const int VEC_DUCK_HULL_MAX				= 18;
-	const int VEC_DUCK_VIEW					= 12;
-	const int PM_DEAD_VIEWHEIGHT			= -8;
-	const int PLAYER_FATAL_FALL_SPEED		= 1024;	// approx 60 feet
-	const int PLAYER_MAX_SAFE_FALL_SPEED	= 580;	// approx 20 feet
-	const float DAMAGE_FOR_FALL_SPEED		= (float)100 / (PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED); // damage per unit per second.
-	const int PLAYER_MIN_BOUNCE_SPEED		= 200;
-	const int PLAYER_FALL_PUNCH_THRESHHOLD	= 350;	// won't punch player's screen/make scrape noise unless player falling at least this fast.
-	const int PLAYER_LONGJUMP_SPEED			= 350;	// how fast we longjump
-	const float PLAYER_DUCKING_MULTIPLIER 	= 0.333;
-	const float	STOP_EPSILON				= 0.1;
-	const int WJ_HEIGHT						= 8;
-	const float BUNNYJUMP_MAX_SPEED_FACTOR	= 1.7f; // Only allow bunny jumping up to 1.7x server / player maxspeed setting
-
-	// edict->movetype values
-	const int MOVETYPE_NONE			= 0;		// never moves
-	const int MOVETYPE_ANGLENOCLIP	= 1;
-	const int MOVETYPE_ANGLECLIP	= 2;
-	const int MOVETYPE_WALK			= 3;		// Player only - moving on the ground
-	const int MOVETYPE_STEP			= 4;		// gravity, special edge handling -- monsters use this
-	const int MOVETYPE_FLY			= 5;		// No gravity, but still collides with stuff
-	const int MOVETYPE_TOSS			= 6;		// gravity/collisions
-	const int MOVETYPE_PUSH			= 7;		// no clip to world, push and crush
-	const int MOVETYPE_NOCLIP		= 8;		// No gravity, no collisions, still do velocity/avelocity
-	const int MOVETYPE_FLYMISSILE	= 9;		// extra size to monsters
-	const int MOVETYPE_BOUNCE		= 10;		// Just like Toss, but reflect velocity when contacting surfaces
-	const int MOVETYPE_BOUNCEMISSILE= 11;		// bounce w/o gravity
-	const int MOVETYPE_FOLLOW		= 12;		// track movement of aiment
-	const int MOVETYPE_PUSHSTEP		= 13;		// BSP model that needs physics/world collisions (uses nearest hull for world collision)
-
-	// edict->flags
-	const int FL_FLY				= (1<<0);	// Changes the SV_Movestep() behavior to not need to be on ground
-	const int FL_SWIM				= (1<<1);	// Changes the SV_Movestep() behavior to not need to be on ground (but stay in water)
-	const int FL_CONVEYOR			= (1<<2);
-	const int FL_CLIENT				= (1<<3);
-	const int FL_INWATER			= (1<<4);
-	const int FL_MONSTER			= (1<<5);
-	const int FL_GODMODE			= (1<<6);
-	const int FL_NOTARGET			= (1<<7);
-	const int FL_SKIPLOCALHOST		= (1<<8);	// Don't send entity to local host, it's predicting this entity itself
-	const int FL_ONGROUND			= (1<<9);	// At rest / on the ground
-	const int FL_PARTIALGROUND		= (1<<10);	// not all corners are valid
-	const int FL_WATERJUMP			= (1<<11);	// player jumping out of water
-	const int FL_FROZEN				= (1<<12);	// Player is frozen for 3rd person camera
-	const int FL_FAKECLIENT			= (1<<13);	// JAC: fake client, simulated server side; don't send network messages to them
-	const int FL_DUCKING			= (1<<14);	// Player flag -- Player is fully crouched
-	const int FL_FLOAT				= (1<<15);	// Apply floating force to this entity when in water
-	const int FL_GRAPHED			= (1<<16);	// worldgraph has this ent listed as something that blocks a connection
-
-	const int FL_PROXY				= (1<<20);	// This is a spectator proxy
-	const int FL_ALWAYSTHINK		= (1<<21);	// Brush model flag -- call think every frame regardless of nextthink - ltime (for constantly changing velocity/path)
-	const int FL_BASEVELOCITY		= (1<<22);	// Base velocity has been applied this frame (used to convert base velocity into momentum)
-	const int FL_MONSTERCLIP		= (1<<23);	// Only collide in with monsters who have FL_MONSTERCLIP set
-	const int FL_ONTRAIN			= (1<<24);	// Player is _controlling_ a train, so movement commands should be ignored on client during prediction.
-	const int FL_WORLDBRUSH			= (1<<25);	// Not moveable/removeable brush entity (really part of the world, but represented as an entity for transparency or something)
-	const int FL_SPECTATOR      	= (1<<26);	// This client is a spectator, don't run touch functions, etc.
-	const int FL_CUSTOMENTITY		= (1<<29);	// This is a custom entity
-	const int FL_KILLME				= (1<<30);	// This entity is marked for death -- This allows the engine to kill ents at the appropriate time
-	const int FL_DORMANT			= (1<<31);	// Entity is dormant, no updates to client
-
-	const int IN_ATTACK				= (1 << 0);
-	const int IN_JUMP				= (1 << 1);
-	const int IN_DUCK				= (1 << 2);
-	const int IN_FORWARD			= (1 << 3);
-	const int IN_BACK				= (1 << 4);
-	const int IN_USE				= (1 << 5);
-	const int IN_CANCEL				= (1 << 6);
-	const int IN_LEFT				= (1 << 7);
-	const int IN_RIGHT				= (1 << 8);
-	const int IN_MOVELEFT			= (1 << 9);
-	const int IN_MOVERIGHT 			= (1 << 10);
-	const int IN_ATTACK2			= (1 << 11);
-	const int IN_RUN      			= (1 << 12);
-	const int IN_RELOAD				= (1 << 13);
-	const int IN_ALT1				= (1 << 14);
-	const int IN_SCORE				= (1 << 15);	// Used by client.dll for when scoreboard is held down
-
-	// texture types
-	const int CHAR_TEX_CONCRETE		= 'C';
-	const int CHAR_TEX_METAL		= 'M';
-	const int CHAR_TEX_DIRT			= 'D';
-	const int CHAR_TEX_VENT			= 'V';
-	const int CHAR_TEX_GRATE		= 'G';
-	const int CHAR_TEX_TILE			= 'T';
-	const int CHAR_TEX_SLOSH		= 'S';
-	const int CHAR_TEX_WOOD			= 'W';
-	const int CHAR_TEX_COMPUTER		= 'P';
-	const int CHAR_TEX_GLASS		= 'Y';
-	const int CHAR_TEX_FLESH		= 'F';
-	const int CHAR_TEX_WADE			= 'Z';
-	const int CHAR_TEX_LADDER		= 'L';
-
-	const int CONTENTS_LAVA			= 0;
-	const int CONTENTS_SLIME		= 1;
-	const int CONTENTS_WATER		= 2;
-	const int CONTENTS_EMPTY		= 3;
-
-	struct tFO2MaterialMatchup {
-		int surfaceId;
-		int footstepId;
-	};
-	tFO2MaterialMatchup aSurfaces[] = {
-			{ 1, CHAR_TEX_CONCRETE }, // NoCollision
-			{ 2, CHAR_TEX_CONCRETE }, // Tarmac (Road)
-			{ 3, CHAR_TEX_CONCRETE }, // Tarmac Mark (Road)
-			{ 4, CHAR_TEX_CONCRETE }, // Asphalt (Road)
-			{ 5, CHAR_TEX_CONCRETE }, // Asphalt Mark (Road)
-			{ 6, CHAR_TEX_CONCRETE }, // Cement Mark (Road)
-			{ 7, CHAR_TEX_CONCRETE }, // Cement Mark (Road)
-			{ 8, CHAR_TEX_DIRT }, // Hard (Road)
-			{ 9, CHAR_TEX_DIRT }, // Hard Mark (Road)
-			{ 10, CHAR_TEX_DIRT }, // Medium (Road)
-			{ 11, CHAR_TEX_DIRT }, // Medium Mark (Road)
-			{ 12, CHAR_TEX_DIRT }, // Soft (Road)
-			{ 13, CHAR_TEX_DIRT }, // Soft Mark (Road)
-			{ 14, CHAR_TEX_DIRT }, // Derby Gravel (Road)
-			{ 15, CHAR_TEX_CONCRETE }, // Derby Tarmac (Road)
-			{ 16, CHAR_TEX_DIRT }, // Snow (Road)
-			{ 17, CHAR_TEX_DIRT }, // Snow Mark (Road)
-			{ 18, CHAR_TEX_DIRT }, // Dirt (Road)
-			{ 19, CHAR_TEX_DIRT }, // Dirt Mark (Road)
-			{ 20, CHAR_TEX_METAL }, // Bridge Metal (Road)
-			{ 21, CHAR_TEX_WOOD }, // Bridge Wooden (Road)
-			{ 22, CHAR_TEX_CONCRETE }, // Curb (Terrain)
-			{ 23, CHAR_TEX_DIRT }, // Bank Sand (terrain)
-			{ 24, CHAR_TEX_DIRT }, // Grass (terrain)
-			{ 25, CHAR_TEX_DIRT }, // Forest (terrain)
-			{ 26, CHAR_TEX_DIRT }, // Sand (terrain)
-			{ 27, CHAR_TEX_CONCRETE }, // Rock (terrain)
-			{ 28, CHAR_TEX_DIRT }, // Mould (terrain)
-			{ 29, CHAR_TEX_DIRT }, // Snow  (terrain)
-			{ 30, CHAR_TEX_DIRT }, // Field  (terrain)
-			{ 31, CHAR_TEX_SLOSH }, // Wet  (terrain)
-			{ 32, CHAR_TEX_CONCRETE }, // Concrete (Object)
-			{ 33, CHAR_TEX_CONCRETE }, // Rock (Object)
-			{ 34, CHAR_TEX_METAL }, // Metal (Object)
-			{ 35, CHAR_TEX_WOOD }, // Wood (Object)
-			{ 36, CHAR_TEX_WOOD }, // Tree (Object)
-			{ 37, CHAR_TEX_CONCRETE }, // Bush
-			{ 38, CHAR_TEX_CONCRETE }, // Rubber (Object)
-			{ 39, CHAR_TEX_SLOSH }, // Water (water)
-			{ 40, CHAR_TEX_SLOSH }, // River (water)
-			{ 41, CHAR_TEX_SLOSH }, // Puddle (water)
-			{ 42, CHAR_TEX_CONCRETE }, // No Camera Col
-			{ 43, CHAR_TEX_CONCRETE }, // Camera only col
-			{ 44, CHAR_TEX_CONCRETE }, // Reset
-			{ 45, CHAR_TEX_CONCRETE }, // Stunt Conveyer
-			{ 46, CHAR_TEX_CONCRETE }, // Stunt Bouncer
-			{ 47, CHAR_TEX_CONCRETE }, // Stunt Curling
-			{ 48, CHAR_TEX_CONCRETE }, // Stunt Bowling
-			{ 49, CHAR_TEX_CONCRETE }, // Stunt Tarmac
-			{ 50, CHAR_TEX_CONCRETE }, // Oil (Road)
-	};
-	int GetSurfaceTextureFromID(int id) {
-		for (auto& surf : aSurfaces) {
-			if (surf.surfaceId == id + 1) return surf.footstepId;
-		}
-		return CHAR_TEX_CONCRETE;
-	}
-
-	typedef int physent_t;
-
-	struct pmplane_t {
-		NyaVec3Double	normal;
-		float	dist;
-	};
-
-	struct pmtrace_t {
-		bool allsolid;			// if true, plane is not valid
-		bool startsolid;		// if true, the initial point was in a solid area
-		bool inopen, inwater;	// End point is in empty space or in water
-		float fraction;			// time completed, 1.0 = didn't hit anything
-		NyaVec3Double endpos;	// final position
-		pmplane_t plane;		// surface normal at impact
-		int ent;				// entity at impact
-
-		// newly added members
-		double distFromOrigin;
-		int surfaceId;
-
-		pmtrace_t() {
-			Default();
-		}
-
-		void Default() {
-			allsolid = false;
-			startsolid = false;
-			inopen = true;
-			inwater = false;
-			fraction = 1.0f;
-			endpos = {0,0,0};
-			plane.normal = {0,0,0};
-			plane.dist = 9999;
-			ent = -1;
-			distFromOrigin = 0;
-			surfaceId = 0;
-		}
-	};
-
-	struct movevars_s {
-		float gravity;  			// Gravity for map
-		float stopspeed;			// Deceleration when not moving
-		float maxspeed; 			// Max allowed speed
-		float accelerate;     		// Acceleration factor
-		float airaccelerate;  		// Same for when in open air
-		float wateraccelerate;		// Same for when in water
-		float friction;
-		float edgefriction;			// Extra friction near dropofs
-		float waterfriction;		// Less in water
-		//float entgravity;  		// 1.0
-		float bounce;      			// Wall bounce value. 1.0
-		float stepsize;    			// sv_stepsize;
-		float maxvelocity; 			// maximum server velocity.
-		//bool footsteps;			// Play footstep sounds
-		float rollangle;
-		float rollspeed;
-	} *movevars = new movevars_s;
-
-	typedef struct usercmd_s {
-		uint32_t msec;				// Duration in ms of command
-		NyaVec3Double viewangles;	// Command view angles.
-
-		// intended velocities
-		float forwardmove;			// Forward velocity.
-		float sidemove;				// Sideways velocity.
-		float upmove;				// Upward velocity.
-		unsigned short buttons;		// Attack buttons
-	} usercmd_t;
-
-	struct playermove_s {
-		float frametime;					// Duration of this frame
-		NyaVec3Double forward, right, up;	// Vectors for angles
-
-		// player state
-		NyaVec3Double origin;				// Movement origin.
-		NyaVec3Double angles;				// Movement view angles.
-		NyaVec3Double oldangles;			// Angles before movement view angles were looked at.
-		NyaVec3Double velocity;				// Current movement direction.
-		NyaVec3Double movedir;				// For waterjumping, a forced forward velocity so we can fly over lip of ledge.
-		NyaVec3Double basevelocity;			// Velocity of the conveyor we are standing, e.g.
-
-		// For ducking/dead
-		NyaVec3Double view_ofs;				// Our eye position.
-		float flDuckTime;					// Time we started duck
-		bool bInDuck;						// In process of ducking or ducked already?
-
-		// For walking/falling
-		int	flTimeStepSound;				// Next time we can play a step sound
-		int	iStepLeft;
-
-		float flFallVelocity;
-		NyaVec3Double punchangle;
-
-		float flSwimTime;
-
-		int	flags;							// FL_ONGROUND, FL_DUCKING, etc.
-		int	usehull;						// 0 = regular player hull, 1 = ducked player hull, 2 = point hull
-		float gravity;						// Our current gravity and friction.
-		float friction;
-		int	oldbuttons;						// Buttons last usercmd
-		float waterjumptime;				// Amount of time left in jumping out of water cycle.
-		bool dead;							// Are we a dead player?
-		int	movetype;						// Our movement type, NOCLIP, WALK, FLY
-
-		int onground;
-		int waterlevel;
-		int watertype;
-		int oldwaterlevel;
-
-		int chtexturetype;
-
-		float maxspeed;
-		float clientmaxspeed;				// Player specific maxspeed
-
-		usercmd_t cmd;
-
-		NyaVec3Double player_mins[4];
-		NyaVec3Double player_maxs[4];
-	} *pmove = new playermove_s;
-
-	void AngleVectors(const NyaVec3Double& angles, NyaVec3Double& fwd, NyaVec3Double& right, NyaVec3Double& up) {
-		auto anglesRad = angles * (std::numbers::pi / 180.0);
-
-		auto mat = NyaMat4x4();
-		mat.Rotate(NyaVec3(-anglesRad[1], anglesRad[2], anglesRad[0]));
-
-		// this is disgusting.
-		fwd.x = (*(NyaVec3*)&mat[FORWARD*4]).x;
-		fwd.y = (*(NyaVec3*)&mat[FORWARD*4]).y;
-		fwd.z = (*(NyaVec3*)&mat[FORWARD*4]).z;
-		right.x = mat.x.x;
-		right.y = mat.x.y;
-		right.z = mat.x.z;
-		up.x = (*(NyaVec3*)&mat[UP*4]).x;
-		up.y = (*(NyaVec3*)&mat[UP*4]).y;
-		up.z = (*(NyaVec3*)&mat[UP*4]).z;
-	}
 
 	void PM_DropPunchAngle(NyaVec3Double& punchangle) {
 		auto len = VectorNormalize(punchangle);
@@ -571,7 +198,6 @@ namespace HLMovement {
 			pmove->cmd.forwardmove = pmove->cmd.sidemove = pmove->cmd.upmove = 0;
 		}
 
-
 		PM_DropPunchAngle(pmove->punchangle);
 
 		// Take angles from command.
@@ -630,213 +256,8 @@ namespace HLMovement {
 		}
 	}
 
-	int GetPointContents(NyaVec3Double point) {
-		if (pEnvironment && pEnvironment->bWaterPlane && point[UP] <= 0) {
-			return CONTENTS_WATER;
-		}
-
-		return CONTENTS_EMPTY;
-	}
-
-	pmtrace_t PointRaytrace(NyaVec3Double origin, NyaVec3Double end) {
-		pmtrace_t trace;
-		trace.allsolid = false;
-		trace.startsolid = false;
-		trace.inopen = true;
-		trace.inwater = false;
-		trace.fraction = 1.0f;
-		trace.endpos = end;
-		trace.plane.normal = {0,0,0};
-		trace.plane.dist = 9999;
-		trace.ent = -1;
-		trace.distFromOrigin = (origin - end).length();
-		trace.surfaceId = 0;
-
-		if (pGameFlow->nGameState == GAME_STATE_RACE && pmove->movetype != MOVETYPE_NOCLIP) {
-			auto originUnits = origin;
-
-			for (int i = 0; i < 3; i++) {
-				origin[i] = UnitsToMeters(origin[i]);
-				end[i] = UnitsToMeters(end[i]);
-			}
-
-			tLineOfSightIn prop;
-
-			NyaVec3Double dir = end - origin;
-			auto dist = dir.length();
-			dir.Normalize();
-
-			auto originf = NyaVec3(origin.x, origin.y, origin.z);
-			auto endf = NyaVec3(end.x, end.y, end.z);
-			auto dirf = NyaVec3(dir.x, dir.y, dir.z);
-
-			prop.fMaxDistance = dist;
-			tLineOfSightOut out;
-			if (CheckLineOfSight(&prop, pGameFlow->pHost->pUnkForLOS, &originf, &dirf, &out)) {
-				trace.plane.dist = MetersToUnits(out.fHitDistance);
-				trace.plane.normal.x = out.vHitNormal.x;
-				trace.plane.normal.y = out.vHitNormal.y;
-				trace.plane.normal.z = out.vHitNormal.z;
-				trace.fraction = out.fHitDistance / dist;
-				if (trace.fraction > 1.0f) trace.fraction = 1.0f;
-				trace.endpos = origin + (dir * out.fHitDistance);
-				trace.ent = 0; // dummy entity
-				trace.surfaceId = out.nSurfaceId;
-
-				for (int i = 0; i < 3; i++) {
-					trace.endpos[i] = MetersToUnits(trace.endpos[i]);
-				}
-
-				trace.distFromOrigin = (trace.endpos - originUnits).length();
-			}
-		}
-
-		return trace;
-	}
-
 	int nPhysicsSteps = 4;
 	int nColDensity = 2;
-
-	// if you have a bbox trace function, implement this yourself
-	/*pmtrace_t PM_PlayerTraceInternal(NyaVec3Double origin, NyaVec3Double end, NyaVec3Double offset1, NyaVec3Double offset2) {
-		// bweh?
-		//origin = end;
-
-		// offset relative to hull
-		offset1 *= pmove->player_maxs[pmove->usehull];
-		offset2 *= pmove->player_maxs[pmove->usehull];
-		auto minDistForSolid = offset2.length();
-
-		pmtrace_t trace;
-		trace.allsolid = false;	    				// if true, plane is not valid
-		trace.startsolid = false;	    			// if true, the initial point was in a solid area
-		trace.inopen = true;
-		trace.inwater = false;						// End point is in empty space or in water
-		trace.fraction = 1.0f;						// time completed, 1.0 = didn't hit anything
-		trace.endpos = end;							// final position
-		trace.plane.normal = {0,0,0};  	// surface normal at impact
-		trace.plane.dist = 9999;
-		trace.ent = -1;								// entity at impact
-		trace.distFromOrigin = (origin - end).length();
-
-		origin += offset1;
-		end += offset2;
-
-		if (pGameFlow->nGameState == GAME_STATE_RACE && pmove->movetype != MOVETYPE_NOCLIP) {
-			auto originUnits = origin;
-
-			for (int i = 0; i < 3; i++) {
-				origin[i] = UnitsToMeters(origin[i]);
-				end[i] = UnitsToMeters(end[i]);
-			}
-
-			tLineOfSightProperties prop;
-			prop.InitAsCameraLOS();
-
-			NyaVec3Double dir = end - origin;
-			auto dist = dir.length();
-			dir.Normalize();
-
-			auto originf = NyaVec3(origin.x, origin.y, origin.z);
-			auto endf = NyaVec3(end.x, end.y, end.z);
-			auto dirf = NyaVec3(dir.x, dir.y, dir.z);
-
-			prop.fMaxDistance = dist;
-			tLineOfSightOut out;
-			if (CheckLineOfSight(&prop, pGameFlow->pHost->pUnkForLOS, &originf, &dirf, &out)) {
-				trace.plane.dist = MetersToUnits(out.fHitDistance);
-				trace.plane.normal.x = out.vHitNormal.x;
-				trace.plane.normal.y = out.vHitNormal.y;
-				trace.plane.normal.z = out.vHitNormal.z;
-				trace.fraction = out.fHitDistance / dist;
-				if (trace.fraction > 1.0f) trace.fraction = 1.0f;
-				trace.endpos = origin + (dir * out.fHitDistance);
-				trace.ent = 0; // dummy entity
-
-				auto offset3 = offset1;
-				offset3[0] = std::lerp(offset1[0], offset2[0], trace.fraction);
-				offset3[FORWARD] = std::lerp(offset1[FORWARD], offset2[FORWARD], trace.fraction);
-				offset3[UP] = offset2[UP];
-
-				for (int i = 0; i < 3; i++) {
-					trace.endpos[i] = MetersToUnits(trace.endpos[i]) - offset3[i];
-				}
-
-				trace.distFromOrigin = (trace.endpos - originUnits).length();
-
-				//if (trace.plane.dist < minDistForSolid * 0.5) {
-				//	trace.allsolid = true;
-				//	trace.startsolid = true;
-				//}
-			}
-		}
-
-		return trace;
-	}
-
-	// todo this is awful
-	pmtrace_t PM_PlayerTrace(NyaVec3Double origin, NyaVec3Double end) {
-		std::vector<pmtrace_t> traces;
-
-		auto trace = PM_PlayerTraceInternal(origin, end, {0,0,0}, {0,0,0});
-		if (trace.ent != -1) traces.push_back(trace);
-		trace = PM_PlayerTraceInternal(origin, end, {0, 0, 0}, {0, -1, 0});
-		if (trace.ent != -1) traces.push_back(trace);
-		trace = PM_PlayerTraceInternal(origin, end, {0, 0, 0}, {0, 1, 0});
-		if (trace.ent != -1) traces.push_back(trace);
-
-		for (int x = -nColDensity; x <= nColDensity; x++) {
-			auto posX = (double)x / nColDensity;
-			for (int y = -nColDensity; y <= nColDensity; y++) {
-				auto posY = (double)y / nColDensity;
-				for (int z = -nColDensity; z <= nColDensity; z++) {
-					auto posZ = (double)z / nColDensity;
-
-					// checks we already did before
-					if (x == 0 && y == 0 && z == 0) continue;
-					if (x == 0 && y == 1 && z == 0) continue;
-					if (x == 0 && y == -1 && z == 0) continue;
-
-					trace = PM_PlayerTraceInternal(origin, end, { 0, 0, 0 }, {posX, posY, posZ});
-					//trace = PM_PlayerTraceInternal(origin, end, { posX, posY, posZ}, {posX, posY, posZ});
-					if (trace.ent != -1) traces.push_back(trace);
-				}
-			}
-		}
-
-		// grab closest hit
-		for (auto& tr : traces) {
-			if (trace.ent == -1 || (tr.distFromOrigin < trace.distFromOrigin && tr.ent != -1)) trace = tr;
-		}
-		return trace;
-	}
-
-	// trace down with offset on both start and end for stair checks
-	pmtrace_t PM_PlayerTraceDown(NyaVec3Double origin, NyaVec3Double end) {
-		std::vector<pmtrace_t> traces;
-
-		auto trace = PM_PlayerTraceInternal(origin, end, {0, 0, 0}, {0, -1, 0});
-		if (trace.ent != -1) traces.push_back(trace);
-
-		for (int x = -nColDensity; x <= nColDensity; x++) {
-			auto posX = (double)x / nColDensity;
-			for (int z = -nColDensity; z <= nColDensity; z++) {
-				auto posZ = (double)z / nColDensity;
-
-				// checks we already did before
-				if (x == 0 && z == 0) continue;
-
-				trace = PM_PlayerTraceInternal(origin, end, {posX, 0, posZ}, {posX, -1, posZ});
-				if (trace.ent != -1) traces.push_back(trace);
-			}
-		}
-
-		// grab closest hit
-		for (auto& tr : traces) {
-			if (trace.ent == -1 || (tr.distFromOrigin < trace.distFromOrigin && tr.ent != -1)) trace = tr;
-		}
-		return trace;
-	}*/
 
 	// for ground movement
 	pmtrace_t GetTopFloorForBBox(NyaVec3Double origin) {
@@ -974,7 +395,7 @@ namespace HLMovement {
 		pmove->watertype = CONTENTS_EMPTY;
 
 		// Grab point contents.
-		cont = GetPointContents(point);
+		cont = GetPointContentsGame(&point);
 		// Are we under water? (not solid and not empty?)
 		if (cont <= CONTENTS_WATER) {
 			// Set water type
@@ -988,7 +409,7 @@ namespace HLMovement {
 
 			// Now check a point that is at the player hull midpoint.
 			point[UP] = pmove->origin[UP] + heightover2;
-			cont = GetPointContents(point);
+			cont = GetPointContentsGame(&point);
 			// If that point is also under water...
 			if (cont <= CONTENTS_WATER) {
 				// Set a higher water level.
@@ -997,7 +418,7 @@ namespace HLMovement {
 				// Now check the eye position.  (view_ofs is relative to the origin)
 				point[UP] = pmove->origin[UP] + pmove->view_ofs[UP];
 
-				cont = GetPointContents(point);
+				cont = GetPointContentsGame(&point);
 				if (cont <= CONTENTS_WATER) {
 					pmove->waterlevel = 3;  // In over our eyes
 				}
@@ -1040,7 +461,7 @@ namespace HLMovement {
 		point[FORWARD] = pmove->origin[FORWARD];
 		point[UP] = pmove->origin[UP] - 2;
 
-		if (pmove->velocity[UP] > 180) { // Shooting up really fast.  Definitely not on ground.
+		if (pmove->velocity[UP] > 180 || pmove->movetype == MOVETYPE_NOCLIP) { // Shooting up really fast.  Definitely not on ground.
 			pmove->onground = -1;
 		} else {
 			// Try and move down.
@@ -1060,7 +481,7 @@ namespace HLMovement {
 
 			// If we are on something...
 			if (pmove->onground != -1) {
-				pmove->chtexturetype = GetSurfaceTextureFromID(tr.surfaceId);
+				pmove->chtexturetype = tr.surfaceId;
 
 				// Then we are not in water jump sequence
 				pmove->waterjumptime = 0;
@@ -1257,10 +678,12 @@ namespace HLMovement {
 			knee[UP] = pmove->origin[UP] - 0.3 * height;
 			feet[UP] = pmove->origin[UP] - 0.5 * height;
 
-			if (GetPointContents(knee) == CONTENTS_WATER) {
+			if (GetPointContentsGame(&knee) == CONTENTS_WATER) {
+				step = CHAR_TEX_WADE;
 				fvol = 0.65;
 				pmove->flTimeStepSound = 600;
-			} else if (GetPointContents(feet) == CONTENTS_WATER) {
+			} else if (GetPointContentsGame(&feet) == CONTENTS_WATER) {
+				step = CHAR_TEX_SLOSH;
 				fvol = fWalking ? 0.2 : 0.5;
 				pmove->flTimeStepSound = fWalking ? 400 : 300;
 			} else {
@@ -1554,7 +977,7 @@ namespace HLMovement {
 #ifdef NYA_HL_COL_FALLBACK
 			friction = movevars->friction;
 #else
-			trace = PM_PlayerTrace (start, stop);
+			trace = PM_PlayerTrace(start, stop);
 
 			if (trace.fraction == 1.0f) {
 				friction = movevars->friction*movevars->edgefriction;
@@ -1663,13 +1086,16 @@ namespace HLMovement {
 		float time_left, allFraction;
 		int	blocked;
 
-		//numbumps  = 4;           // Bump up to four times
-		numbumps  = 1;           // Bump up to four times
+#ifdef NYA_HL_COL_FALLBACK
+		numbumps  = 1;
+#else
+		numbumps  = 4;           // Bump up to four times
+#endif
 
 		blocked   = 0;           // Assume not blocked
 		numplanes = 0;           //  and not sliding along any planes
-		VectorCopy (pmove->velocity, original_velocity);  // Store original velocity
-		VectorCopy (pmove->velocity, primal_velocity);
+		VectorCopy(pmove->velocity, original_velocity);  // Store original velocity
+		VectorCopy(pmove->velocity, primal_velocity);
 
 		allFraction = 0;
 		time_left = pmove->frametime;   // Total time for this movement operation.
@@ -2120,7 +1546,7 @@ namespace HLMovement {
 		// If the trace ended up in empty space, copy the end
 		//  over to the origin.
 		if (!trace.startsolid && !trace.allsolid) {
-			VectorCopy (trace.endpos, pmove->origin);
+			VectorCopy(trace.endpos, pmove->origin);
 		}
 		// Copy this origion to up.
 		VectorCopy(pmove->origin, pmove->up);
@@ -2645,12 +2071,11 @@ namespace HLMovement {
 
 		pmove->gravity = 1;
 		pmove->friction = 1;
-		pmove->cmd.viewangles.x = FO2Cam::vAngle.x / (std::numbers::pi / 180.0);
-		pmove->cmd.viewangles.y = FO2Cam::vAngle.y / (std::numbers::pi / 180.0);
-		pmove->cmd.viewangles.z = FO2Cam::vAngle.z / (std::numbers::pi / 180.0);
+		GetGamePlayerViewAngle(&pmove->cmd.viewangles);
 		pmove->clientmaxspeed = movevars->maxspeed;
 		if (pmove->movetype == MOVETYPE_NOCLIP) pmove->clientmaxspeed = sv_noclipspeed;
 		pmove->maxspeed = pmove->clientmaxspeed; // not sure what the difference is here? todo?
+		pmove->dead = GetGamePlayerDead();
 
 		pmove->cmd.forwardmove = 0;
 		pmove->cmd.sidemove = 0;
@@ -2661,6 +2086,7 @@ namespace HLMovement {
 		if (IsKeyPressed('D')) pmove->cmd.sidemove += cl_sidespeed;
 		if (IsKeyPressed('W')) pmove->cmd.forwardmove += cl_forwardspeed;
 		if (IsKeyPressed('S')) pmove->cmd.forwardmove -= cl_forwardspeed;
+		if (IsKeyPressed('E')) pmove->cmd.buttons |= IN_USE;
 		if (IsKeyPressed(VK_SPACE)) pmove->cmd.buttons |= IN_JUMP;
 		if (IsKeyPressed(VK_LCONTROL)) pmove->cmd.buttons |= IN_DUCK;
 		if (IsKeyPressed(VK_LSHIFT)) {
@@ -2671,23 +2097,34 @@ namespace HLMovement {
 	}
 
 	void ApplyMoveParams() {
-		auto pos = pmove->origin + pmove->view_ofs;
-		pos[UP] += V_CalcBob();
-		FO2Cam::vPos.x = UnitsToMeters(pos.x);
-		FO2Cam::vPos.y = UnitsToMeters(pos.y);
-		FO2Cam::vPos.z = UnitsToMeters(pos.z);
-		FO2Cam::vAngleView.x = pmove->angles.x * (std::numbers::pi / 180.0);
-		FO2Cam::vAngleView.y = pmove->angles.y * (std::numbers::pi / 180.0);
-		FO2Cam::vAngleView.z = pmove->angles.z * (std::numbers::pi / 180.0);
+		auto eye = pmove->origin + pmove->view_ofs;
+		eye[UP] += V_CalcBob();
+
+		auto origin = pmove->origin;
+		auto velocity = pmove->velocity;
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				eye[i] = UnitsToMeters(eye[i]);
+				origin[i] = UnitsToMeters(origin[i]);
+				velocity[i] = UnitsToMeters(velocity[i]);
+			}
+		}
+
+		SetGamePlayerPosition(&origin, &velocity);
+		SetGamePlayerViewPosition(&eye);
+		SetGamePlayerViewAngle(&pmove->angles);
 	}
 
 	void Reset() {
-		pmove->origin = {0,0,0};
-		if (auto ply = GetPlayer(0)) {
-			pmove->origin.x = MetersToUnits(ply->pCar->GetMatrix()->p.x);
-			pmove->origin.y = MetersToUnits(ply->pCar->GetMatrix()->p.y + 1);
-			pmove->origin.z = MetersToUnits(ply->pCar->GetMatrix()->p.z);
+		NyaVec3Double gamePlayer;
+		GetGamePlayerPosition(&gamePlayer);
+		if (bConvertUnits) {
+			for (int i = 0; i < 3; i++) {
+				gamePlayer[i] = MetersToUnits(gamePlayer[i]);
+			}
 		}
+		pmove->origin = gamePlayer;
+
 		pmove->angles = {0,0,0};
 		pmove->oldangles = {0,0,0};
 		pmove->cmd.viewangles = {0,0,0};
@@ -2762,8 +2199,7 @@ namespace HLMovement {
 			FO2Cam::nLastGameState = -1;
 		}
 
-
-		if (DrawMenuOption("Behavior")) {
+		if (DrawMenuOption("Behavior", "Adjust the movement physics")) {
 			ChloeMenuLib::BeginMenu();
 
 			ValueEditorMenu(bAutoBhop, "Auto Bhop");
@@ -2781,12 +2217,12 @@ namespace HLMovement {
 
 			ChloeMenuLib::EndMenu();
 		}
-		if (DrawMenuOption("Parameters")) {
+		if (DrawMenuOption("Parameters", "Adjust console variables")) {
 			ChloeMenuLib::BeginMenu();
 
-			ValueEditorMenu(fSoundVolume, "Sound Volume");
 			ValueEditorMenu(FO2Cam::fFOV, "fov_desired");
 			ValueEditorMenu(FO2Cam::fSensitivity, "sensitivity");
+			ValueEditorMenu(fSoundVolume, "volume");
 			ValueEditorMenu(sv_gravity, "sv_gravity");
 			ValueEditorMenu(sv_stopspeed, "sv_stopspeed");
 			ValueEditorMenu(sv_maxspeed, "sv_maxspeed");
@@ -2816,12 +2252,14 @@ namespace HLMovement {
 		}
 
 		if (DrawMenuOption("Debug Info")) {
+			ChloeMenuLib::BeginMenu();
 			DrawMenuOption(std::format("Velocity - {:.2f} {:.2f} {:.2f}", pmove->velocity[0], pmove->velocity[1], pmove->velocity[2]));
 			DrawMenuOption(std::format("Punch Angle - {:.2f} {:.2f} {:.2f}", pmove->punchangle[0], pmove->punchangle[1], pmove->punchangle[2]));
 			DrawMenuOption(std::format("View Angle - {:.2f} {:.2f} {:.2f}", pmove->angles[0], pmove->angles[1], pmove->angles[2]));
-			DrawMenuOption(std::format("Last Plane Normal - {:.2f}", fLastPlaneNormal), "", true);
-			DrawMenuOption(std::format("On Ground - {}", pmove->onground), "", true);
-			DrawMenuOption(std::format("{}", lastConsoleMsg), "", true);
+			DrawMenuOption(std::format("Last Plane Normal - {:.2f}", fLastPlaneNormal));
+			DrawMenuOption(std::format("On Ground - {}", pmove->onground));
+			DrawMenuOption(std::format("{}", lastConsoleMsg));
+			ChloeMenuLib::EndMenu();
 		}
 	}
 }
