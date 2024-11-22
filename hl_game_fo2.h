@@ -66,6 +66,36 @@ namespace HLMovement {
 		return CHAR_TEX_CONCRETE;
 	}
 
+	std::string GetSpeechPath(const std::string& file) {
+		return "data/sound/hl/" + file;
+	}
+
+	std::vector<NyaAudio::NyaSound> aSoundCache;
+	void ProcessSoundCache() {
+		int i = 0;
+		for (auto& sound : aSoundCache) {
+			if (NyaAudio::IsFinishedPlaying(sound)) {
+				auto tmp = sound;
+				NyaAudio::Delete(&tmp);
+				aSoundCache.erase(aSoundCache.begin() + i);
+				return ProcessSoundCache();
+			}
+			i++;
+		}
+	}
+
+	std::vector<NyaAudio::NyaSound> aSoundCache;
+	void PlayGameSound(const std::string& path, float volume) {
+		NyaAudio::Init(pDeviceD3d->hWnd);
+		ProcessSoundCache();
+
+		auto sound = NyaAudio::LoadFile(GetSpeechPath(path).c_str());
+		if (!sound) return;
+		NyaAudio::SetVolume(sound, volume * fSoundVolume);
+		NyaAudio::Play(sound);
+		aSoundCache.push_back(sound);
+	}
+
 	bool GetGamePlayerDead() {
 		if (auto ply = GetPlayer(0)) {
 			return ply->nIsWrecked;
