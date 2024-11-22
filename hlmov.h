@@ -159,6 +159,7 @@ namespace HLMovement {
 	const int PLAYER_LONGJUMP_SPEED			= 350;	// how fast we longjump
 	const float PLAYER_DUCKING_MULTIPLIER 	= 0.333;
 	const float	STOP_EPSILON				= 0.1;
+	const int WJ_HEIGHT						= 8;
 
 	// edict->movetype values
 	const int MOVETYPE_NONE			= 0;		// never moves
@@ -526,7 +527,7 @@ namespace HLMovement {
 		VectorCopy(pmove->velocity, vel);
 		vel[UP] = 0;
 
-		bob = sqrt(vel[0] * vel[0] + vel[FORWARD] * vel[FORWARD]) * cl_bob;
+		bob = std::sqrt(vel[0] * vel[0] + vel[FORWARD] * vel[FORWARD]) * cl_bob;
 		bob = bob * 0.3 + bob * 0.7 * std::sin(cycle);
 		bob = std::min(bob, 4.0f);
 		bob = std::max(bob, -7.0f);
@@ -1525,7 +1526,7 @@ namespace HLMovement {
 		vel = pmove->velocity;
 
 		// Calculate speed
-		speed = sqrt(vel[0]*vel[0] + vel[1]*vel[1] + vel[2]*vel[2]);
+		speed = std::sqrt(vel[0]*vel[0] + vel[1]*vel[1] + vel[2]*vel[2]);
 
 		// If too slow, return
 		if (speed < 0.1f) {
@@ -2216,12 +2217,12 @@ namespace HLMovement {
 
 				pmove->velocity[0] = pmove->forward[0] * PLAYER_LONGJUMP_SPEED * 1.6;
 				pmove->velocity[FORWARD] = pmove->forward[FORWARD] * PLAYER_LONGJUMP_SPEED * 1.6;
-				pmove->velocity[UP] = sqrt(2 * 800 * 56.0);
+				pmove->velocity[UP] = std::sqrt(2 * 800 * 56.0);
 			} else {
-				pmove->velocity[UP] = sqrt(2 * 800 * 45.0);
+				pmove->velocity[UP] = std::sqrt(2 * 800 * 45.0);
 			}
 		} else {
-			pmove->velocity[UP] = sqrt(2 * 800 * 45.0);
+			pmove->velocity[UP] = std::sqrt(2 * 800 * 45.0);
 		}
 
 		if (bABH || bABHMixed) {
@@ -2267,6 +2268,64 @@ namespace HLMovement {
 
 		// Flag that we jumped.
 		pmove->oldbuttons |= IN_JUMP;	// don't jump again until released
+	}
+
+	void PM_CheckWaterJump() {
+		NyaVec3Double vecStart, vecEnd;
+		NyaVec3Double flatforward;
+		NyaVec3Double flatvelocity;
+		float curspeed;
+		pmtrace_t tr;
+		int savehull;
+
+		// Already water jumping.
+		if (pmove->waterjumptime) return;
+
+		// Don't hop out if we just jumped in
+		if (pmove->velocity[UP] < -180) return; // only hop out if we are moving up
+
+		// See if we are backing up
+		flatvelocity[0] = pmove->velocity[0];
+		flatvelocity[FORWARD] = pmove->velocity[FORWARD];
+		flatvelocity[UP] = 0;
+
+		// Must be moving
+		curspeed = VectorNormalize(flatvelocity);
+
+		// see if near an edge
+		flatforward[0] = pmove->forward[0];
+		flatforward[FORWARD] = pmove->forward[FORWARD];
+		flatforward[UP] = 0;
+		VectorNormalize(flatforward);
+
+		// Are we backing into water from steps or something?  If so, don't pop forward
+		if (curspeed != 0.0 && (DotProduct(flatvelocity, flatforward) < 0.0)) return;
+
+		VectorCopy(pmove->origin, vecStart);
+		vecStart[UP] += WJ_HEIGHT;
+
+		VectorMA(vecStart, 24, flatforward, vecEnd);
+
+		// Trace, this trace should use the point sized collision hull
+		savehull = pmove->usehull;
+		pmove->usehull = 2;
+		tr = PointRaytrace(vecStart, vecEnd);
+		if (tr.fraction < 1.0 && std::abs(tr.plane.normal[UP]) < 0.1f) { // Facing a near vertical wall?
+			vecStart[UP] += pmove->player_maxs[savehull][UP] - WJ_HEIGHT;
+			VectorMA(vecStart, 24, flatforward, vecEnd);
+			VectorMA(vec3_origin, -50, tr.plane.normal, pmove->movedir);
+
+			tr = PointRaytrace(vecStart, vecEnd);
+			if (tr.fraction == 1.0) {
+				pmove->waterjumptime = 2000;
+				pmove->velocity[UP] = 225;
+				pmove->oldbuttons |= IN_JUMP;
+				pmove->flags |= FL_WATERJUMP;
+			}
+		}
+
+		// Reset the collision hull
+		pmove->usehull = savehull;
 	}
 
 	void PM_CheckFalling() {
@@ -2457,10 +2516,9 @@ namespace HLMovement {
 				// If we are swimming in the water, see if we are nudging against a place we can jump up out
 				//  of, and, if so, start out jump.  Otherwise, if we are not moving up, then reset jump timer to 0
 				if (pmove->waterlevel >= 2) {
-					// todo
-					//if (pmove->waterlevel == 2) {
-					//	PM_CheckWaterJump();
-					//}
+					if (pmove->waterlevel == 2) {
+						PM_CheckWaterJump();
+					}
 
 					// If we are falling again, then we must not trying to jump out of water any more.
 					if (pmove->velocity[UP] < 0 && pmove->waterjumptime) {
