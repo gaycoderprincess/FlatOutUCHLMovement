@@ -82,6 +82,15 @@ namespace HLMovement {
 		}
 	}
 
+	void GetGamePlayerVelocity(NyaVec3Double* out) {
+		*out = {0,0,0};
+		if (auto ply = GetPlayer(0)) {
+			out->x = ply->pCar->GetVelocity()->x;
+			out->y = ply->pCar->GetVelocity()->y;
+			out->z = ply->pCar->GetVelocity()->z;
+		}
+	}
+
 	void GetGamePlayerViewAngle(NyaVec3Double* out) {
 		out->x = FO2Cam::vAngle.x / (std::numbers::pi / 180.0);
 		out->y = FO2Cam::vAngle.y / (std::numbers::pi / 180.0);

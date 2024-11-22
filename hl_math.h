@@ -59,9 +59,10 @@ namespace HLMovement {
 
 	void AngleVectors(const NyaVec3Double& angles, NyaVec3Double& fwd, NyaVec3Double& right, NyaVec3Double& up) {
 		auto anglesRad = angles * (std::numbers::pi / 180.0);
+		anglesRad[PITCH] *= -1;
 
 		auto mat = NyaMat4x4();
-		mat.Rotate(NyaVec3(-anglesRad[1], anglesRad[2], anglesRad[0]));
+		mat.Rotate(NyaVec3(anglesRad[1], anglesRad[2], anglesRad[0]));
 
 		// this is disgusting.
 		fwd.x = (*(NyaVec3*)&mat[FORWARD*4]).x;

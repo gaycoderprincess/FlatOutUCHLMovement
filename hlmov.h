@@ -2143,20 +2143,22 @@ namespace HLMovement {
 	}
 
 	void Reset() {
-		NyaVec3Double gamePlayer;
+		NyaVec3Double gamePlayer, gameVelocity;
 		GetGamePlayerPosition(&gamePlayer);
+		GetGamePlayerVelocity(&gameVelocity);
 		if (bConvertUnits) {
 			for (int i = 0; i < 3; i++) {
 				gamePlayer[i] = MetersToUnits(gamePlayer[i]);
+				gameVelocity[i] = MetersToUnits(gameVelocity[i]);
 			}
 		}
 		pmove->origin = gamePlayer;
+		pmove->velocity = gameVelocity;
 
 		pmove->angles = {0,0,0};
 		pmove->oldangles = {0,0,0};
 		pmove->cmd.viewangles = {0,0,0};
 		pmove->punchangle = {0,0,0};
-		pmove->velocity = {0,0,0};
 		pmove->basevelocity = {0,0,0};
 		pmove->movedir = {0,0,0};
 		pmove->onground = -1;

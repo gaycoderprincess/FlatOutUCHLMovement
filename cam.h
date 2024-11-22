@@ -8,25 +8,6 @@ namespace FO2Cam {
 	float fFOV = 90;
 	float fSensitivity = 1;
 
-	void SetRotation(Camera *cam) {
-		auto mat = cam->GetMatrix();
-		mat->SetIdentity();
-		mat->Rotate({-vAngleView[1], vAngleView[2], vAngleView[0]});
-		mat->p = vPos;
-	}
-
-	void DoMovement(Camera *cam) {
-		auto mat = cam->GetMatrix();
-		vAngle[0] += fMouse[0] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;
-		vAngle[1] -= fMouse[1] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;
-
-		float maxPitch = std::numbers::pi * 0.4999;
-		if (vAngle[1] < -maxPitch) vAngle[1] = -maxPitch;
-		if (vAngle[1] > maxPitch) vAngle[1] = maxPitch;
-
-		mat->p = vPos;
-	}
-
 	void Process(Camera *cam) {
 		if (!cam) return;
 		if (nLastGameState != pGameFlow->nRaceState) {
@@ -35,18 +16,26 @@ namespace FO2Cam {
 			if (auto ply = GetPlayer(0)) {
 				auto fwd = ply->pCar->GetMatrix()->z;
 				vAngle[0] = atan2(-fwd.x, fwd.z);
+				vAngle[1] = vAngle[2] = 0;
 			}
 			nLastGameState = pGameFlow->nRaceState;
 		}
 
-		SetRotation(cam);
-		DoMovement(cam);
-		SetRotation(cam);
+		auto mat = cam->GetMatrix();
+		vAngle[0] += fMouse[0] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;
+		vAngle[1] -= fMouse[1] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;
+
+		float maxPitch = std::numbers::pi * 0.49;
+		if (vAngle[1] < -maxPitch) vAngle[1] = -maxPitch;
+		if (vAngle[1] > maxPitch) vAngle[1] = maxPitch;
 
 		fMouse[0] = 0;
 		fMouse[1] = 0;
 		nMouseWheelState = 0;
 
+		mat->SetIdentity();
+		mat->Rotate({-vAngleView[1], vAngleView[2], vAngleView[0]});
+		mat->p = vPos;
 		cam->fFOV = fFOV * (std::numbers::pi / 180.0);
 	}
 }
