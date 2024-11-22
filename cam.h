@@ -3,10 +3,10 @@ namespace FO2Cam {
 
 	double fMouse[2] = {};
 	NyaVec3 vPos = {0, 0, 0};
-	NyaVec3 vAngle = {0, 0, 0};
-	NyaVec3 vAngleView = {0, 0, 0};
+	NyaVec3 vAngle = {0, 0, 0}; // input angle
+	NyaVec3 vAngleView = {0, 0, 0}; // output angle with HL offsets
 	float fFOV = 90;
-	float fMouseRotateSpeed = 0.05;
+	float fSensitivity = 1;
 
 	void SetRotation(Camera *cam) {
 		auto mat = cam->GetMatrix();
@@ -17,8 +17,8 @@ namespace FO2Cam {
 
 	void DoMovement(Camera *cam) {
 		auto mat = cam->GetMatrix();
-		vAngle[0] += fMouse[0] * -fMouseRotateSpeed * (std::numbers::pi / 180.0);
-		vAngle[1] -= fMouse[1] * -fMouseRotateSpeed * (std::numbers::pi / 180.0);
+		vAngle[0] += fMouse[0] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;
+		vAngle[1] -= fMouse[1] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;
 
 		float maxPitch = std::numbers::pi * 0.4999;
 		if (vAngle[1] < -maxPitch) vAngle[1] = -maxPitch;
@@ -32,7 +32,10 @@ namespace FO2Cam {
 		if (nLastGameState != pGameFlow->nRaceState) {
 			vAngle = {0, 0, 0};
 			vAngleView = {0, 0, 0};
-			//fFOV = cam->fFOV;
+			if (auto ply = GetPlayer(0)) {
+				auto fwd = ply->pCar->GetMatrix()->z;
+				vAngle[0] = atan2(-fwd.x, fwd.z);
+			}
 			nLastGameState = pGameFlow->nRaceState;
 		}
 

@@ -85,7 +85,11 @@ void RunMovement(Camera* cam) {
 	if (FO2Cam::nLastGameState != pGameFlow->nRaceState) {
 		HLMovement::Reset();
 	}
-	HLMovement::Process();
+
+	static CNyaTimer gTimer;
+	gTimer.Process();
+	HLMovement::Process(gTimer.fDeltaTime);
+
 	FO2Cam::Process(cam);
 }
 

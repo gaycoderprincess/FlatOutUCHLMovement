@@ -3,11 +3,15 @@ namespace HLMovement {
 		return "data/sound/hl/" + file;
 	}
 
+	float fSoundVolume = 1;
+
 	std::vector<NyaAudio::NyaSound> aSoundCache;
 	void PlayGameSound(const std::string& path, float volume) {
+		NyaAudio::Init(pDeviceD3d->hWnd);
+
 		auto sound = NyaAudio::LoadFile(GetSpeechPath(path).c_str());
 		if (!sound) return;
-		NyaAudio::SetVolume(sound, volume);
+		NyaAudio::SetVolume(sound, volume * fSoundVolume);
 		NyaAudio::Play(sound);
 		aSoundCache.push_back(sound);
 	}
@@ -18,7 +22,8 @@ namespace HLMovement {
 	bool bCanLongJump = false;
 	bool bAutoBhop = true;
 	bool bABH = false;
-	bool bABHMixed = true;
+	bool bABHMixed = false;
+	bool bBhopCap = false;
 
 	float cl_bob = 0.01;
 	float cl_bobcycle = 0.8;
@@ -160,6 +165,7 @@ namespace HLMovement {
 	const float PLAYER_DUCKING_MULTIPLIER 	= 0.333;
 	const float	STOP_EPSILON				= 0.1;
 	const int WJ_HEIGHT						= 8;
+	const float BUNNYJUMP_MAX_SPEED_FACTOR	= 1.7f; // Only allow bunny jumping up to 1.7x server / player maxspeed setting
 
 	// edict->movetype values
 	const int MOVETYPE_NONE			= 0;		// never moves
@@ -427,8 +433,6 @@ namespace HLMovement {
 		NyaVec3Double player_maxs[4];
 	} *pmove = new playermove_s;
 
-	CNyaTimer gTimer;
-
 	void AngleVectors(const NyaVec3Double& angles, NyaVec3Double& fwd, NyaVec3Double& right, NyaVec3Double& up) {
 		auto anglesRad = angles * (std::numbers::pi / 180.0);
 
@@ -690,6 +694,7 @@ namespace HLMovement {
 		return trace;
 	}
 
+	int nPhysicsSteps = 4;
 	int nColDensity = 2;
 
 	// if you have a bbox trace function, implement this yourself
@@ -2135,6 +2140,26 @@ namespace HLMovement {
 		}
 	}
 
+	void PM_PreventMegaBunnyJumping() {
+		if (!bBhopCap) return;
+
+		// Speed at which bunny jumping is limited
+		auto maxscaledspeed = BUNNYJUMP_MAX_SPEED_FACTOR * pmove->maxspeed;
+
+		// Don't divide by zero
+		if (maxscaledspeed <= 0.0f) return;
+
+		// Current player speed
+		auto spd = pmove->velocity.length();
+
+		if (spd <= maxscaledspeed) return;
+
+		// If we have to crop, apply this cropping fraction to velocity
+		auto fraction = (maxscaledspeed / spd) * 0.65; //Returns the modifier for the velocity
+
+		VectorScale(pmove->velocity, fraction, pmove->velocity); //Crop it down!.
+	}
+
 	void PM_Jump() {
 		if (pmove->dead) {
 			pmove->oldbuttons |= IN_JUMP;	// don't jump again until released
@@ -2200,7 +2225,7 @@ namespace HLMovement {
 		// In the air now.
 		pmove->onground = -1;
 
-		//PM_PreventMegaBunnyJumping();
+		PM_PreventMegaBunnyJumping();
 
 		PM_PlayStepSound(pmove->chtexturetype, 1.0);
 
@@ -2395,7 +2420,7 @@ namespace HLMovement {
 		pmove->velocity[FORWARD] = pmove->movedir[FORWARD];
 	}
 
-	void PM_PlayerMove() {
+	void PM_PlayerMove(double delta) {
 		physent_t *pLadder = nullptr;
 
 		// Adjust speeds etc.
@@ -2405,7 +2430,7 @@ namespace HLMovement {
 		//pmove->numtouch = 0;
 
 		// # of msec to apply movement
-		pmove->frametime = gTimer.fDeltaTime;
+		pmove->frametime = delta;
 		pmove->cmd.msec = pmove->frametime * 1000;
 
 		PM_ReduceTimers();
@@ -2599,12 +2624,6 @@ namespace HLMovement {
 		}
 	}
 
-	void PM_Move() {
-		gTimer.Process();
-
-		PM_PlayerMove();
-	}
-
 	void SetupMoveParams() {
 		movevars->gravity = sv_gravity;  			// Gravity for map
 		movevars->stopspeed = sv_stopspeed;			// Deceleration when not moving
@@ -2725,9 +2744,15 @@ namespace HLMovement {
 		pmove->movetype = pmove->movetype == MOVETYPE_NOCLIP ? MOVETYPE_WALK : MOVETYPE_NOCLIP;
 	}
 
-	void Process() {
+	void Process(double delta) {
 		SetupMoveParams();
-		PM_Move();
+
+		int numSteps = nPhysicsSteps;
+		if (numSteps < 1) numSteps = 1;
+		for (int i = 0; i < nPhysicsSteps; i++) {
+			PM_PlayerMove(delta / (double)nPhysicsSteps);
+		}
+
 		ApplyMoveParams();
 	}
 
@@ -2737,23 +2762,31 @@ namespace HLMovement {
 			FO2Cam::nLastGameState = -1;
 		}
 
-		if (DrawMenuOption(std::format("Field of View - {}", FO2Cam::fFOV), "")) {
-			ValueEditorMenu(FO2Cam::fFOV);
-		}
 
-		if (DrawMenuOption(std::format("Sensitivity - {}", FO2Cam::fMouseRotateSpeed), "")) {
-			ValueEditorMenu(FO2Cam::fMouseRotateSpeed);
-		}
-
-		ValueEditorMenu(bAutoBhop, "Auto Bhop");
-		ValueEditorMenu(bABH, "ABH");
-		ValueEditorMenu(bABHMixed, "Mixed ABH");
-		ValueEditorMenu(bCanLongJump, "Long Jump Module");
-		ValueEditorMenu(nColDensity, "Collision Density");
-
-		if (DrawMenuOption("Parameters", "")) {
+		if (DrawMenuOption("Behavior")) {
 			ChloeMenuLib::BeginMenu();
 
+			ValueEditorMenu(bAutoBhop, "Auto Bhop");
+			ValueEditorMenu(bABH, "ABH");
+			ValueEditorMenu(bABHMixed, "Mixed ABH");
+			ValueEditorMenu(bCanLongJump, "Long Jump Module");
+			ValueEditorMenu(bBhopCap, "Bhop Speed Cap");
+
+			if (DrawMenuOption("Advanced")) {
+				ChloeMenuLib::BeginMenu();
+				ValueEditorMenu(nColDensity, "Collision Density");
+				ValueEditorMenu(nPhysicsSteps, "Physics Steps");
+				ChloeMenuLib::EndMenu();
+			}
+
+			ChloeMenuLib::EndMenu();
+		}
+		if (DrawMenuOption("Parameters")) {
+			ChloeMenuLib::BeginMenu();
+
+			ValueEditorMenu(fSoundVolume, "Sound Volume");
+			ValueEditorMenu(FO2Cam::fFOV, "fov_desired");
+			ValueEditorMenu(FO2Cam::fSensitivity, "sensitivity");
 			ValueEditorMenu(sv_gravity, "sv_gravity");
 			ValueEditorMenu(sv_stopspeed, "sv_stopspeed");
 			ValueEditorMenu(sv_maxspeed, "sv_maxspeed");
@@ -2778,18 +2811,17 @@ namespace HLMovement {
 			ValueEditorMenu(cl_bob, "cl_bob");
 			ValueEditorMenu(cl_bobcycle, "cl_bobcycle");
 			ValueEditorMenu(cl_bobup, "cl_bobup");
-			if (DrawMenuOption(std::format("sv_gravity - {}", sv_gravity), "")) {
-				ValueEditorMenu(sv_gravity);
-			}
 
 			ChloeMenuLib::EndMenu();
 		}
 
-		DrawMenuOption(std::format("Velocity - {:.2f} {:.2f} {:.2f}", pmove->velocity[0], pmove->velocity[1], pmove->velocity[2]), "", true);
-		DrawMenuOption(std::format("Punch Angle - {:.2f} {:.2f} {:.2f}", pmove->punchangle[0], pmove->punchangle[1], pmove->punchangle[2]), "", true);
-		DrawMenuOption(std::format("View Angle - {:.2f} {:.2f} {:.2f}", pmove->angles[0], pmove->angles[1], pmove->angles[2]), "", true);
-		DrawMenuOption(std::format("Last Plane Normal - {:.2f}", fLastPlaneNormal), "", true);
-		DrawMenuOption(std::format("On Ground - {}", pmove->onground), "", true);
-		DrawMenuOption(std::format("{}", lastConsoleMsg), "", true);
+		if (DrawMenuOption("Debug Info")) {
+			DrawMenuOption(std::format("Velocity - {:.2f} {:.2f} {:.2f}", pmove->velocity[0], pmove->velocity[1], pmove->velocity[2]));
+			DrawMenuOption(std::format("Punch Angle - {:.2f} {:.2f} {:.2f}", pmove->punchangle[0], pmove->punchangle[1], pmove->punchangle[2]));
+			DrawMenuOption(std::format("View Angle - {:.2f} {:.2f} {:.2f}", pmove->angles[0], pmove->angles[1], pmove->angles[2]));
+			DrawMenuOption(std::format("Last Plane Normal - {:.2f}", fLastPlaneNormal), "", true);
+			DrawMenuOption(std::format("On Ground - {}", pmove->onground), "", true);
+			DrawMenuOption(std::format("{}", lastConsoleMsg), "", true);
+		}
 	}
 }
