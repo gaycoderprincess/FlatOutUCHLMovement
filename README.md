@@ -2,6 +2,8 @@
 
 Experimental plugin for FlatOut: Ultimate Carnage that implements movement from the original Half-Life.
 
+https://github.com/user-attachments/assets/78839a5b-210d-4ad9-b17e-0b074bc6ae14
+
 ## Installation
 
 - Make sure you have the Steam GFWL version of the game, as this is the only version this plugin is compatible with. (exe size of 4242504 bytes)
