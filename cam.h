@@ -19,6 +19,7 @@ namespace FO2Cam {
 				vAngle[1] = vAngle[2] = 0;
 			}
 			nLastGameState = pGameFlow->nRaceState;
+			FreemanAPI::ResetPhysics();
 		}
 
 		auto mat = cam->GetMatrix();

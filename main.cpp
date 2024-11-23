@@ -43,6 +43,7 @@ void RunMovement(Camera* cam) {
 		FreemanAPI::Process(gTimer.fDeltaTime);
 		FO2Cam::Process(cam);
 	}
+	FO2Cam::nLastGameState = pGameFlow->nRaceState;
 }
 
 void HookLoop() {
