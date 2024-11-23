@@ -14,6 +14,8 @@ https://github.com/user-attachments/assets/78839a5b-210d-4ad9-b17e-0b074bc6ae14
 
 Building is done on an Arch Linux system with CLion being used for the build process. 
 
-Before you begin, clone [nya-common](https://github.com/gaycoderprincess/nya-common) and [nya-common-fouc](https://github.com/gaycoderprincess/nya-common-fouc) to a folder next to this one, so it can be found.
+Before you begin, clone [nya-common](https://github.com/gaycoderprincess/nya-common), [nya-common-fouc](https://github.com/gaycoderprincess/nya-common-fouc) and [FreemanAPI](https://github.com/gaycoderprincess/FreemanAPI) to folders next to this one, so they can be found.
 
 You should be able to build the project now in CLion.
+
+After building, make sure to also get BASS from https://www.un4seen.com/bass.html

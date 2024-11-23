@@ -31,6 +31,7 @@ target_include_directories(FlatOutUCHLMovement PUBLIC ../nya-common/3rdparty/img
 target_include_directories(FlatOutUCHLMovement PUBLIC ../nya-common/3rdparty/imgui/backends)
 target_include_directories(FlatOutUCHLMovement PUBLIC ../nya-common-fouc)
 target_include_directories(FlatOutUCHLMovement PUBLIC ../FlatOutUCMenuLib/include)
+target_include_directories(FlatOutUCHLMovement PUBLIC ../FreemanAPI/include)
 target_link_options(FlatOutUCHLMovement PRIVATE "-Wl,--exclude-all-symbols")
 set_target_properties(FlatOutUCHLMovement PROPERTIES PREFIX "")
 set_target_properties(FlatOutUCHLMovement PROPERTIES SUFFIX "_gcp.asi")
