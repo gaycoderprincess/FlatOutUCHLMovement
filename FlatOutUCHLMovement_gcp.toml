@@ -10,8 +10,8 @@ abh_mixed=false
 bhop_cap=false
 better_maxvelocity=false
 noclip_toggle=false
-
-[game]
+show_velocity=false
+show_velocity_2d=true
 teleport_car=false
 car_godmode=false
 
