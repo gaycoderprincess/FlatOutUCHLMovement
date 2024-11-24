@@ -32,18 +32,13 @@ void RunMovement(Camera* cam) {
 		FO2Cam::nLastGameState = -1;
 		return;
 	}
+	FO2Cam::Process(cam);
+}
 
-	if (FO2Cam::nLastGameState != pGameFlow->nRaceState) {
-		FreemanAPI::ResetPhysics();
-	}
-
-	static CNyaTimer gTimer;
-	gTimer.Process();
-	if (pGameFlow->nRaceState == RACE_STATE_RACING) {
-		FreemanAPI::Process(gTimer.fDeltaTime);
-		FO2Cam::Process(cam);
-	}
-	FO2Cam::nLastGameState = pGameFlow->nRaceState;
+void __fastcall ProcessPlayerCar(Player* pPlayer) {
+	if (!FreemanAPI::GetIsEnabled()) return;
+	if (pGameFlow->nRaceState != RACE_STATE_RACING) return;
+	FreemanAPI::Process(0.01);
 }
 
 void HookLoop() {
@@ -147,6 +142,19 @@ void MouseWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	}
 }
 
+uintptr_t ProcessPlayerCarsASM_call = 0x478CF0;
+void __attribute__((naked)) ProcessPlayerCarsASM() {
+	__asm__ (
+		"pushad\n\t"
+		"mov ecx, esi\n\t"
+		"call %1\n\t"
+		"popad\n\t"
+		"jmp %0\n\t"
+			:
+			:  "m" (ProcessPlayerCarsASM_call), "i" (ProcessPlayerCar)
+	);
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -168,6 +176,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			UpdateCameraHooked_call = (void(__thiscall*)(void*, float))(*(uintptr_t*)0x6EB7DC);
 			NyaHookLib::Patch(0x6EB7DC, &UpdateCameraHooked);
+
+			ProcessPlayerCarsASM_call = NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x47A010, &ProcessPlayerCarsASM);
 
 			RegisterHLMovement();
 		} break;

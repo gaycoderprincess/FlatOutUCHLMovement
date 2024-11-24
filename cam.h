@@ -21,6 +21,7 @@ namespace FO2Cam {
 			nLastGameState = pGameFlow->nRaceState;
 			FreemanAPI::ResetPhysics();
 		}
+		if (pGameFlow->nRaceState != RACE_STATE_RACING) return;
 
 		auto mat = cam->GetMatrix();
 		vAngle[0] += fMouse[0] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;
