@@ -38,5 +38,6 @@ namespace FO2Cam {
 		mat->Rotate({-vAngleView[1], vAngleView[2], vAngleView[0]});
 		mat->p = vPos;
 		cam->fFOV = fFOV * (std::numbers::pi / 180.0);
+		cam->fNearZ = 0.1;
 	}
 }
