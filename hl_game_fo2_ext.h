@@ -181,18 +181,10 @@ FreemanAPI::pmtrace_t* PointRaytrace(const double* _origin, const double* _end) 
 	auto end = *(NyaVec3Double*)_end;
 
 	static FreemanAPI::pmtrace_t trace;
-	trace.allsolid = false;
-	trace.startsolid = false;
-	trace.inopen = true;
-	trace.inwater = false;
-	trace.fraction = 1.0f;
+	trace.Default();
 	trace.endpos[0] = end[0];
 	trace.endpos[1] = end[1];
 	trace.endpos[2] = end[2];
-	memset(trace.plane.normal, 0, sizeof(trace.plane.normal));
-	trace.plane.dist = 9999;
-	trace.ent = -1;
-	trace.surfaceId = 0;
 
 	if (pGameFlow->nGameState == GAME_STATE_RACE) {
 		tLineOfSightIn prop;

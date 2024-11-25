@@ -15,13 +15,18 @@ namespace FO2Cam {
 			vAngleView = {0, 0, 0};
 			if (auto ply = GetPlayer(0)) {
 				auto fwd = ply->pCar->GetMatrix()->z;
-				vAngle[0] = atan2(-fwd.x, fwd.z);
+				vAngle[0] = std::atan2(-fwd.x, fwd.z);
 				vAngle[1] = vAngle[2] = 0;
 			}
 			nLastGameState = pGameFlow->nRaceState;
 			FreemanAPI::ResetPhysics();
 		}
-		if (pGameFlow->nRaceState != RACE_STATE_RACING) return;
+		if (!ShouldRunMovement()) {
+			fMouse[0] = 0;
+			fMouse[1] = 0;
+			nMouseWheelState = 0;
+			return;
+		}
 
 		auto mat = cam->GetMatrix();
 		vAngle[0] += fMouse[0] * -fSensitivity * (std::numbers::pi / 180.0) * 0.05;

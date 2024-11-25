@@ -10,6 +10,17 @@
 #include "chloemenulib.h"
 #include "freemanapi.h"
 
+bool ShouldRunMovement() {
+	if (!FreemanAPI::GetIsEnabled()) return false;
+	if (!pGameFlow) return false;
+	if (pGameFlow->nGameState != GAME_STATE_RACE) return false;
+	if (pGameFlow->nRaceState != RACE_STATE_RACING) return false;
+	auto ply = GetPlayer(0);
+	if (!ply) return false;
+	if (ply->pCar->nIsRagdolled) return false;
+	return true;
+}
+
 #include "cam.h"
 #include "hl_game_fo2_ext.h"
 
@@ -36,18 +47,28 @@ void RunMovement(Camera* cam) {
 }
 
 void __fastcall ProcessPlayerCar(Player* pPlayer) {
-	if (!FreemanAPI::GetIsEnabled()) return;
-	if (pGameFlow->nRaceState != RACE_STATE_RACING) return;
+	if (!ShouldRunMovement()) return;
 	FreemanAPI::Process(0.01);
 }
 
-void HookLoop() {
-	CNyaTimer gTimer;
-	gTimer.Process();
+void UpdateCodePatches() {
+	if (FreemanAPI::GetIsEnabled() && pGameFlow->nDerbyType == DERBY_NONE) {
+		// disable ragdolling
+		NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x427EAF, 0x427FCF);
+	}
+	else {
+		NyaHookLib::Patch<uint64_t>(0x427EAF, 0x99390000011A840F);
+	}
 
-	if (!FreemanAPI::GetIsEnabled()) return;
-	if (!pGameFlow) return;
-	if (pGameFlow->nRaceState != RACE_STATE_RACING) return;
+	// disable autoreset & resetmap
+	NyaHookLib::Patch<uint8_t>(0x4D8460, FreemanAPI::GetIsEnabled() ? 0xEB : 0x77);
+	NyaHookLib::Patch<uint8_t>(0x43D69E, FreemanAPI::GetIsEnabled() ? 0xEB : 0x75);
+}
+
+void HookLoop() {
+	UpdateCodePatches();
+
+	if (!ShouldRunMovement()) return;
 
 	if (IsKeyJustPressed('V')) {
 		FreemanAPI::ToggleNoclip();
