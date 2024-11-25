@@ -52,7 +52,8 @@ void __fastcall ProcessPlayerCar(Player* pPlayer) {
 }
 
 void UpdateCodePatches() {
-	if (FreemanAPI::GetIsEnabled() && pGameFlow->nDerbyType == DERBY_NONE) {
+	bool shouldDoPatches = FreemanAPI::GetIsEnabled() && bTeleportCar;
+	if (shouldDoPatches && pGameFlow->nDerbyType == DERBY_NONE) {
 		// disable ragdolling
 		NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x427EAF, 0x427FCF);
 	}
@@ -61,8 +62,8 @@ void UpdateCodePatches() {
 	}
 
 	// disable autoreset & resetmap
-	NyaHookLib::Patch<uint8_t>(0x4D8460, FreemanAPI::GetIsEnabled() ? 0xEB : 0x77);
-	NyaHookLib::Patch<uint8_t>(0x43D69E, FreemanAPI::GetIsEnabled() ? 0xEB : 0x75);
+	NyaHookLib::Patch<uint8_t>(0x4D8460, shouldDoPatches ? 0xEB : 0x77);
+	NyaHookLib::Patch<uint8_t>(0x43D69E, shouldDoPatches ? 0xEB : 0x75);
 }
 
 void HookLoop() {

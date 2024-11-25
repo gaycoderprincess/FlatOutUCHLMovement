@@ -158,10 +158,16 @@ void SetGamePlayerViewAngle(const double* in) {
 
 	if (bTeleportCar) {
 		if (auto ply = GetPlayer(0)) {
+			int PITCH, ROLL;
+			FreemanAPI::GetRotateOrder(&PITCH, nullptr, &ROLL);
+
+			auto angle = FO2Cam::vAngleView;
+			angle[PITCH] = 0;
+			angle[ROLL] = 0;
 			auto mat = ply->pCar->GetMatrix();
 			auto oldPos = mat->p;
 			mat->SetIdentity();
-			mat->Rotate({-FO2Cam::vAngleView[1], FO2Cam::vAngleView[2], FO2Cam::vAngleView[0]});
+			mat->Rotate({-angle[1], angle[2], angle[0]});
 			mat->p = oldPos;
 			FO2MatrixToQuat(&mat->x.x, &ply->pCar->qQuaternion[0]);
 		}
