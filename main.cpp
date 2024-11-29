@@ -53,6 +53,7 @@ void __fastcall ProcessPlayerCar(Player* pPlayer) {
 
 void UpdateCodePatches() {
 	bool shouldDoPatches = FreemanAPI::GetIsEnabled() && bTeleportCar;
+	bool isActivelyRunning = shouldDoPatches && ShouldRunMovement();
 	if (shouldDoPatches && pGameFlow->nDerbyType == DERBY_NONE) {
 		// disable ragdolling
 		NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x427EAF, 0x427FCF);
@@ -64,6 +65,10 @@ void UpdateCodePatches() {
 	// disable autoreset & resetmap
 	NyaHookLib::Patch<uint8_t>(0x4D8460, shouldDoPatches ? 0xEB : 0x77);
 	NyaHookLib::Patch<uint8_t>(0x43D69E, shouldDoPatches ? 0xEB : 0x75);
+
+	// make player car invisible
+	NyaHookLib::Patch<uint16_t>(0x4F3F26, isActivelyRunning ? 0x9090 : 0x1D74);
+	NyaHookLib::Patch<uint16_t>(0x4F3F3E, isActivelyRunning ? 0x9090 : 0x0575);
 }
 
 void HookLoop() {
