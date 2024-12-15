@@ -7,6 +7,7 @@
 #include "nya_commonhooklib.h"
 
 #include "fouc.h"
+#include "fo2versioncheck.h"
 #include "chloemenulib.h"
 #include "freemanapi.h"
 
@@ -62,9 +63,15 @@ void UpdateCodePatches() {
 		NyaHookLib::Patch<uint64_t>(0x427EAF, 0x99390000011A840F);
 	}
 
+	bool shouldDoResetPatches = shouldDoPatches;
+	// hack for chloe collection stunt show
+	if (pGameFlow->nGameMode == GM_ARCADE_CAREER && pGameFlow->nGameRulesIngame == GR_ARCADE_RACE && pGameFlow->nLevelId == TRACK_PIT2B) {
+		shouldDoResetPatches = true;
+	}
+
 	// disable autoreset & resetmap
-	NyaHookLib::Patch<uint8_t>(0x4D8460, shouldDoPatches ? 0xEB : 0x77);
-	NyaHookLib::Patch<uint8_t>(0x43D69E, shouldDoPatches ? 0xEB : 0x75);
+	NyaHookLib::Patch<uint8_t>(0x4D8460, shouldDoResetPatches ? 0xEB : 0x77);
+	NyaHookLib::Patch<uint8_t>(0x43D69E, shouldDoResetPatches ? 0xEB : 0x75);
 
 	// make player car invisible
 	NyaHookLib::Patch<uint16_t>(0x4F3F26, isActivelyRunning ? 0x9090 : 0x1D74);
@@ -185,11 +192,7 @@ void __attribute__((naked)) ProcessPlayerCarsASM() {
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
-			if (NyaHookLib::GetEntryPoint() != 0x24CEF7) {
-				MessageBoxA(nullptr, aFOUCVersionFail, "nya?!~", MB_ICONERROR);
-				exit(0);
-				return TRUE;
-			}
+			DoFlatOutVersionCheck(FO2Version::FOUC_GFWL);
 
 			ChloeMenuLib::RegisterMenu("Half-Life Movement - gaycoderprincess", MenuLoop);
 			NyaFO2Hooks::PlaceD3DHooks();

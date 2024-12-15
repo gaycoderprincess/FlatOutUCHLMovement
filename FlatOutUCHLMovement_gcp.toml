@@ -13,8 +13,8 @@ better_maxvelocity=false
 noclip_toggle=false
 show_velocity=false
 show_velocity_2d=true
-teleport_car=false
-car_godmode=false
+teleport_car=true
+car_godmode=true
 
 [advanced]
 physics_steps=4
