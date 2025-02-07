@@ -59,6 +59,9 @@ void RunMovement(Camera* cam) {
 void __fastcall ProcessPlayerCar(Player* pPlayer) {
 	if (!ShouldRunMovement()) return;
 	if (FO2Cam::nLastGameState != pGameFlow->nRaceState) return;
+#ifdef HLMOV_CHLOECOLLECTION
+	pPlayer->pCar->fNitro = 0.0;
+#endif
 	FreemanAPI::Process(0.01);
 }
 
