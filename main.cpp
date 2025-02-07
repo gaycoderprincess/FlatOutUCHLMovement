@@ -83,7 +83,7 @@ void UpdateCodePatches() {
 	bool shouldDoResetPatches = shouldDoPatches;
 #ifndef HLMOV_CHLOECOLLECTION
 	// hack for chloe collection stunt show
-	if (pGameFlow->nGameMode == GM_ARCADE_CAREER && pGameFlow->nGameRulesIngame == GR_ARCADE_RACE && pGameFlow->nLevelId == TRACK_PIT2B) {
+	if (pGameFlow->PreRace.nMode == GM_ARCADE_CAREER && pGameFlow->nGameRules == GR_ARCADE_RACE && pGameFlow->PreRace.nLevel == TRACK_PIT2B) {
 		shouldDoResetPatches = true;
 	}
 #endif
