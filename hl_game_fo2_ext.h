@@ -1,8 +1,15 @@
 // HL to FO2 integration
+#ifdef HLMOV_CHLOECOLLECTION
+bool bTeleportCar = true;
+bool bCarGodmode = true;
+bool bShowVelocity = false;
+bool bShowVelocity2D = true;
+#else
 bool bTeleportCar = false;
 bool bCarGodmode = false;
 bool bShowVelocity = false;
 bool bShowVelocity2D = false;
+#endif
 
 struct tFO2MaterialMatchup {
 	int surfaceId;
@@ -128,12 +135,12 @@ void GetGamePlayerViewAngle(double* out) {
 	out[2] = FO2Cam::vAngle.z / (std::numbers::pi / 180.0);
 }
 
-void SetGamePlayerPosition(const double* in, const double* inVelocity) {
+void SetGamePlayerPositionRaw(const double* in, const double* inVelocity) {
 	if (!bTeleportCar) return;
 
 	if (auto ply = GetPlayer(0)) {
 		ply->pCar->GetMatrix()->p.x = in[0];
-		ply->pCar->GetMatrix()->p.y = in[1] - 1.5;
+		ply->pCar->GetMatrix()->p.y = in[1];
 		ply->pCar->GetMatrix()->p.z = in[2];
 		ply->pCar->GetVelocity()->x = inVelocity[0];
 		ply->pCar->GetVelocity()->y = inVelocity[1];
@@ -143,6 +150,11 @@ void SetGamePlayerPosition(const double* in, const double* inVelocity) {
 			ply->pCar->fDamage = 0;
 		}
 	}
+}
+
+void SetGamePlayerPosition(const double* in, const double* inVelocity) {
+	double in2[3] = {in[0], in[1] - 1.5, in[2]};
+	SetGamePlayerPositionRaw(in2, inVelocity);
 }
 
 void SetGamePlayerViewPosition(const double* in) {
@@ -284,6 +296,15 @@ void RegisterHLMovement() {
 	FreemanAPI::Register_GetGameMoveUse(GetGameMoveUse);
 
 	// custom vars
+#ifdef HLMOV_CHLOECOLLECTION
+	FreemanAPI::Register_SetGamePlayerPositionRaw(SetGamePlayerPositionRaw);
+	FreemanAPI::LoadConfig();
+	FreemanAPI::SetIsHL2Mode(true);
+	*FreemanAPI::GetConfigBoolean("Mixed ABH") = true;
+	*FreemanAPI::GetConfigBoolean("Better sv_maxvelocity") = true;
+	*FreemanAPI::GetConfigFloatHL2("sv_airaccelerate") = 25.0;
+	*FreemanAPI::GetConfigFloatHL2("sv_maxvelocity") = 5000.0;
+#else
 	FreemanAPI::SetConfigName("FlatOutUCHLMovement_gcp.toml");
 	FreemanAPI::RegisterCustomBoolean("Teleport Car", "teleport_car", &bTeleportCar, 0);
 	FreemanAPI::RegisterCustomBoolean("Car Godmode", "car_godmode", &bCarGodmode, 0);
@@ -293,4 +314,5 @@ void RegisterHLMovement() {
 	FreemanAPI::RegisterCustomFloat("sensitivity", "sensitivity", &FO2Cam::fSensitivity, 1);
 	FreemanAPI::RegisterCustomFloat("volume", "volume", &fSoundVolume, 1);
 	FreemanAPI::LoadConfig();
+#endif
 }

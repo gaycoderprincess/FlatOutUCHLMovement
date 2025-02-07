@@ -12,13 +12,19 @@
 #include "freemanapi.h"
 
 bool ShouldRunMovement() {
+#ifndef HLMOV_CHLOECOLLECTION
 	if (!FreemanAPI::GetIsEnabled()) return false;
+#endif
 	if (!pGameFlow) return false;
 	if (pGameFlow->nGameState != GAME_STATE_RACE) return false;
 	if (pGameFlow->nRaceState != RACE_STATE_RACING) return false;
 	auto ply = GetPlayer(0);
 	if (!ply) return false;
 	if (ply->pCar->nIsRagdolled) return false;
+#ifdef HLMOV_CHLOECOLLECTION
+	auto table = GetLiteDB()->GetTable(std::format("FlatOut2.Cars.Car[{}]", ply->nCarId).c_str());
+	if (!table->DoesPropertyExist("UseHLPhysics")) return false;
+#endif
 	return true;
 }
 
@@ -40,6 +46,9 @@ void UpdateD3DProperties() {
 
 void RunMovement(Camera* cam) {
 	if (!cam) return;
+#ifdef HLMOV_CHLOECOLLECTION
+	FreemanAPI::SetIsEnabled(ShouldRunMovement());
+#endif
 	if (!FreemanAPI::GetIsEnabled()) {
 		FO2Cam::nLastGameState = -1;
 		return;
@@ -49,11 +58,16 @@ void RunMovement(Camera* cam) {
 
 void __fastcall ProcessPlayerCar(Player* pPlayer) {
 	if (!ShouldRunMovement()) return;
+	if (FO2Cam::nLastGameState != pGameFlow->nRaceState) return;
 	FreemanAPI::Process(0.01);
 }
 
 void UpdateCodePatches() {
+#ifdef HLMOV_CHLOECOLLECTION
+	bool shouldDoPatches = ShouldRunMovement();
+#else
 	bool shouldDoPatches = FreemanAPI::GetIsEnabled() && bTeleportCar;
+#endif
 	bool isActivelyRunning = shouldDoPatches && ShouldRunMovement();
 	if (shouldDoPatches && pGameFlow->nDerbyType == DERBY_NONE) {
 		// disable ragdolling
@@ -64,10 +78,12 @@ void UpdateCodePatches() {
 	}
 
 	bool shouldDoResetPatches = shouldDoPatches;
+#ifndef HLMOV_CHLOECOLLECTION
 	// hack for chloe collection stunt show
 	if (pGameFlow->nGameMode == GM_ARCADE_CAREER && pGameFlow->nGameRulesIngame == GR_ARCADE_RACE && pGameFlow->nLevelId == TRACK_PIT2B) {
 		shouldDoResetPatches = true;
 	}
+#endif
 
 	// disable autoreset & resetmap
 	NyaHookLib::Patch<uint8_t>(0x4D8460, shouldDoResetPatches ? 0xEB : 0x77);
@@ -194,13 +210,18 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 		case DLL_PROCESS_ATTACH: {
 			DoFlatOutVersionCheck(FO2Version::FOUC_GFWL);
 
+#ifndef HLMOV_CHLOECOLLECTION
 			ChloeMenuLib::RegisterMenu("Half-Life Movement - gaycoderprincess", MenuLoop);
+#endif
+
 			NyaFO2Hooks::PlaceD3DHooks();
 			NyaFO2Hooks::aEndSceneFuncs.push_back(D3DHookMain);
 			NyaFO2Hooks::aD3DResetFuncs.push_back(OnD3DReset);
+#ifndef HLMOV_CHLOECOLLECTION
 			if (*(uint64_t*)0x4F49F6 == 0x006A000001B4838B) {
 				NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4F49F6, &DrawHook);
 			}
+#endif
 			NyaFO2Hooks::PlaceWndProcHook();
 			NyaFO2Hooks::aWndProcFuncs.push_back(MouseWndProc);
 
