@@ -74,10 +74,10 @@ void UpdateCodePatches() {
 	bool isActivelyRunning = shouldDoPatches && ShouldRunMovement();
 	if (shouldDoPatches && pGameFlow->nDerbyType == DERBY_NONE) {
 		// disable ragdolling
-		NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x427EAF, 0x427FCF);
+		NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x427EBB, 0x427FCF);
 	}
 	else {
-		NyaHookLib::Patch<uint64_t>(0x427EAF, 0x99390000011A840F);
+		NyaHookLib::Patch<uint64_t>(0x427EBB, 0xB9830000010E850F);
 	}
 
 	bool shouldDoResetPatches = shouldDoPatches;
@@ -89,8 +89,8 @@ void UpdateCodePatches() {
 #endif
 
 	// disable autoreset & resetmap
-	NyaHookLib::Patch<uint8_t>(0x4D8460, shouldDoResetPatches ? 0xEB : 0x77);
-	NyaHookLib::Patch<uint8_t>(0x43D69E, shouldDoResetPatches ? 0xEB : 0x75);
+	NyaHookLib::Patch<uint64_t>(0x4D83AB, shouldDoResetPatches ? 0x05D990000000CFE9 : 0x05D9000000CE8B0F);
+	NyaHookLib::Patch<uint8_t>(0x43D696, shouldDoResetPatches ? 0xEB : 0x75);
 
 	// make player car invisible
 	NyaHookLib::Patch<uint16_t>(0x4F3F26, isActivelyRunning ? 0x9090 : 0x1D74);
