@@ -24,6 +24,7 @@ bool ShouldRunMovement() {
 #ifdef HLMOV_CHLOECOLLECTION
 	auto table = GetLiteDB()->GetTable(std::format("FlatOut2.Cars.Car[{}]", ply->nCarId).c_str());
 	if (!table->DoesPropertyExist("UseHLPhysics")) return false;
+	if (ply->pCar->GetMatrix()->p.y < -500) return false;
 #endif
 	return true;
 }
@@ -99,6 +100,9 @@ void UpdateCodePatches() {
 
 void HookLoop() {
 	UpdateCodePatches();
+#ifdef HLMOV_CHLOECOLLECTION
+	fSoundVolume = (*(int*)0x849550) * 0.01;
+#endif
 
 	if (!ShouldRunMovement()) return;
 
