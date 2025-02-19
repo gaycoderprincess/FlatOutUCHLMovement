@@ -304,6 +304,8 @@ void RegisterHLMovement() {
 	*FreemanAPI::GetConfigBoolean("Better sv_maxvelocity") = true;
 	*FreemanAPI::GetConfigFloatHL2("sv_airaccelerate") = 25.0;
 	*FreemanAPI::GetConfigFloatHL2("sv_maxvelocity") = 5000.0;
+	//*FreemanAPI::GetConfigFloatHL1("sv_airaccelerate") = 25.0;
+	*FreemanAPI::GetConfigFloatHL1("sv_maxvelocity") = 5000.0;
 #else
 	FreemanAPI::SetConfigName("FlatOutUCHLMovement_gcp.toml");
 	FreemanAPI::RegisterCustomBoolean("Teleport Car", "teleport_car", &bTeleportCar, 0);

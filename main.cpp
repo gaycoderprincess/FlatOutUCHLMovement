@@ -45,10 +45,31 @@ void UpdateD3DProperties() {
 	nResY = nGameResolutionY;
 }
 
+#ifdef HLMOV_CHLOECOLLECTION
+void UpdateMovementProperties() {
+	static bool bLastProfessional = false;
+
+	bool uncappedSpeedLimit = *(uint8_t*)0x445106 == 0xEB;
+	bool isProfessionalHandling = NyaHookLib::ReadRelative(0x480D2C + 1) != 0x42B4A0;
+	*FreemanAPI::GetConfigFloatHL1("sv_maxvelocity") = *FreemanAPI::GetConfigFloatHL2("sv_maxvelocity") = uncappedSpeedLimit ? INFINITY : 5000.0;
+
+	if (bLastProfessional != isProfessionalHandling) {
+		FreemanAPI::SetIsHL2Mode(!isProfessionalHandling);
+		*FreemanAPI::GetConfigBoolean("Mixed ABH") = !isProfessionalHandling;
+		bLastProfessional = isProfessionalHandling;
+	}
+
+	if (auto sensitivity = GetGameSettingByName("MouseSensitivity")) {
+		FO2Cam::fSensitivity = std::lerp(0.25, 4.0, *(int*)sensitivity->value / 100.0);
+	}
+}
+#endif
+
 void RunMovement(Camera* cam) {
 	if (!cam) return;
 #ifdef HLMOV_CHLOECOLLECTION
 	FreemanAPI::SetIsEnabled(ShouldRunMovement());
+	UpdateMovementProperties();
 #endif
 	if (!FreemanAPI::GetIsEnabled()) {
 		FO2Cam::nLastGameState = -1;
