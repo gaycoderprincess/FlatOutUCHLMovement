@@ -302,7 +302,7 @@ void RegisterHLMovement() {
 	FreemanAPI::SetIsHL2Mode(true);
 	*FreemanAPI::GetConfigBoolean("Mixed ABH") = true;
 	*FreemanAPI::GetConfigBoolean("Better sv_maxvelocity") = true;
-	*FreemanAPI::GetConfigFloatHL2("sv_airaccelerate") = 25.0;
+	*FreemanAPI::GetConfigFloatHL2("sv_airaccelerate") = 50.0;
 	*FreemanAPI::GetConfigFloatHL2("sv_maxvelocity") = 5000.0;
 	//*FreemanAPI::GetConfigFloatHL1("sv_airaccelerate") = 25.0;
 	*FreemanAPI::GetConfigFloatHL1("sv_maxvelocity") = 5000.0;
